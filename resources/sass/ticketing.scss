@@ -1,0 +1,286 @@
+.app-shell {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(180deg, #f5f7ff 0%, #ffffff 60%);
+}
+
+.navbar-brand {
+    letter-spacing: 0.04em;
+}
+
+.dropdown-item {
+    cursor: pointer;
+}
+
+.auth-wrapper {
+    min-height: calc(100vh - 160px);
+    display: flex;
+    align-items: center;
+}
+
+.auth-wrapper .card {
+    border-radius: 1.25rem;
+}
+
+.ticket-index {
+    min-height: calc(100vh - 200px);
+}
+
+.ticket-index .ticket-card {
+    border-radius: 1.25rem;
+}
+
+.ticket-index .progress {
+    height: 8px;
+    background-color: #ecf0ff;
+    border-radius: 999px;
+}
+
+.ticket-index .progress-bar {
+    background: linear-gradient(90deg, #4c6ef5 0%, #8f53ff 100%);
+}
+
+.ticket-index .empty-state {
+    border: 2px dashed #ced4f3;
+    border-radius: 1.5rem;
+    background-color: #f8f9ff;
+}
+
+.ticket-index .section-heading {
+    gap: 1.5rem;
+}
+
+.ticket-index .ticket-header {
+    align-items: center;
+}
+
+.ticket-index .ticket-meta .btn {
+    white-space: nowrap;
+}
+
+.ticket-index .progress-labels .label {
+    flex: 1;
+    text-align: center;
+}
+
+.ticket-index .ticket-flags .badge {
+    font-size: 0.8rem;
+    border-radius: 999px;
+    padding: 0.35rem 0.75rem;
+}
+
+.ticket-index .ticket-flags .flag-icon {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+@media (max-width: 992px) {
+    .ticket-index .create-button {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+@media (max-width: 768px) {
+    .ticket-index .section-heading {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+
+    .ticket-index .heading-copy {
+        text-align: center;
+    }
+
+    .ticket-index .ticket-card {
+        border-radius: 1rem;
+    }
+
+    .ticket-index .ticket-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .ticket-index .ticket-meta {
+        text-align: left !important;
+    }
+
+    .ticket-index .ticket-meta .btn {
+        width: 100%;
+    }
+
+    .ticket-index .progress-labels {
+        flex-wrap: wrap;
+        row-gap: 0.5rem;
+    }
+
+    .ticket-index .progress-labels .label {
+        flex: 1 1 45%;
+    }
+}
+
+.ticket-create {
+    min-height: calc(100vh - 200px);
+    display: flex;
+    align-items: center;
+}
+
+.ticket-create .card {
+    border-radius: 1.5rem;
+}
+
+.selected-attachment {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+@media (max-width: 992px) {
+    .ticket-create .back-button {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+@media (max-width: 768px) {
+    .ticket-create {
+        align-items: stretch;
+        padding: 2rem 0 3rem;
+    }
+
+    .ticket-create .card {
+        border-radius: 1rem;
+    }
+
+    .ticket-create .form-header {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+
+    .ticket-create .form-intro {
+        text-align: center;
+    }
+}
+
+.detail-wrapper {
+    min-height: calc(100vh - 200px);
+}
+
+.detail-wrapper .timeline {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+    position: relative;
+}
+
+.detail-wrapper .timeline-step {
+    position: relative;
+    padding-top: 1.5rem;
+}
+
+.detail-wrapper .timeline-step::before {
+    content: '';
+    position: absolute;
+    top: 1.75rem;
+    left: 20px;
+    right: -20px;
+    height: 2px;
+    background: #e1e4ff;
+    z-index: 1;
+}
+
+.detail-wrapper .timeline-step:last-child::before {
+    right: 20px;
+}
+
+.detail-wrapper .step-indicator {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #e1e4ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: #4c6ef5;
+    position: relative;
+    z-index: 2;
+}
+
+.detail-wrapper .timeline-step.completed .step-indicator {
+    background: linear-gradient(135deg, #4c6ef5 0%, #8f53ff 100%);
+    color: #fff;
+}
+
+.detail-wrapper .timeline-step.current .step-indicator {
+    border: 2px solid #4c6ef5;
+    background: #fff;
+}
+
+.detail-wrapper .step-content {
+    margin-top: 1rem;
+}
+
+.detail-wrapper .approval-info {
+    background-color: #f7f8ff;
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+}
+
+.detail-wrapper .approval-info .note {
+    color: #4c6ef5;
+    font-size: 0.85rem;
+}
+
+.detail-wrapper .approval-item {
+    padding: 1rem 0;
+    border-bottom: 1px dashed #e5e7ff;
+}
+
+.detail-wrapper .approval-item:last-child {
+    border-bottom: none;
+}
+
+.detail-wrapper .status-badge {
+    font-size: 0.85rem;
+}
+
+.detail-wrapper .attachment-panel {
+    border-style: dashed;
+}
+
+.detail-wrapper .comment-form textarea {
+    resize: vertical;
+}
+
+.detail-wrapper .comment-item {
+    background-color: #f9f9ff;
+}
+
+.selected-attachment .btn {
+    padding: 0;
+    font-size: 0.85rem;
+}
+
+@media (max-width: 768px) {
+    .detail-wrapper .detail-header {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+
+    .detail-wrapper .detail-copy {
+        text-align: center;
+    }
+
+    .detail-wrapper .detail-meta {
+        text-align: left !important;
+    }
+
+    .detail-wrapper .timeline {
+        grid-template-columns: 1fr;
+    }
+
+    .detail-wrapper .timeline-step::before {
+        display: none;
+    }
+}
