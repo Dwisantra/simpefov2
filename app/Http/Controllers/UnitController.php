@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ManagerCategory;
 use App\Enums\UserRole;
 use App\Models\Unit;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class UnitController extends Controller
 {
@@ -40,12 +42,18 @@ class UnitController extends Controller
             'name' => 'required|string|max:255',
             'instansi' => 'required|in:wiradadi,raffa',
             'is_active' => 'sometimes|boolean',
+            'manager_category_id' => [
+                'nullable',
+                'integer',
+                Rule::in(array_map(fn (ManagerCategory $category) => $category->value, ManagerCategory::cases())),
+            ],
         ]);
 
         $unit = Unit::create([
             'name' => $data['name'],
             'instansi' => $data['instansi'],
             'is_active' => $data['is_active'] ?? true,
+            'manager_category_id' => $data['manager_category_id'] ?? null,
         ]);
 
         return response()->json($unit, 201);
@@ -59,6 +67,11 @@ class UnitController extends Controller
             'name' => 'sometimes|required|string|max:255',
             'instansi' => 'sometimes|required|in:wiradadi,raffa',
             'is_active' => 'sometimes|boolean',
+            'manager_category_id' => [
+                'nullable',
+                'integer',
+                Rule::in(array_map(fn (ManagerCategory $category) => $category->value, ManagerCategory::cases())),
+            ],
         ]);
 
         $unit->fill($data);

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\ManagerCategory;
 use App\Enums\UserRole;
 use App\Models\Unit;
 use App\Models\User;
@@ -54,13 +55,44 @@ class DatabaseSeeder extends Seeder
         );
 
         User::updateOrCreate(
-            ['email' => 'manager@example.com'],
+            ['email' => 'manager.yanmum@example.com'],
             [
-                'name' => 'Manager',
+                'name' => 'Manager Yanmum',
                 'password' => Hash::make('password'),
                 'level' => UserRole::MANAGER->value,
+                'manager_category_id' => ManagerCategory::YANMUM->value,
                 'kode_sign' => Hash::make('MGR001'),
                 'phone' => '081100000002',
+                'instansi' => 'wiradadi',
+                'unit_id' => $wiradadiOps?->id,
+                'verified_at' => $now,
+            ]
+        );
+
+        User::updateOrCreate(
+            ['email' => 'manager.yanmed@example.com'],
+            [
+                'name' => 'Manager Yanmed',
+                'password' => Hash::make('password'),
+                'level' => UserRole::MANAGER->value,
+                'manager_category_id' => ManagerCategory::YANMED->value,
+                'kode_sign' => Hash::make('MGR002'),
+                'phone' => '081100000006',
+                'instansi' => 'wiradadi',
+                'unit_id' => $wiradadiOps?->id,
+                'verified_at' => $now,
+            ]
+        );
+
+        User::updateOrCreate(
+            ['email' => 'manager.jangmed@example.com'],
+            [
+                'name' => 'Manager Jangmed',
+                'password' => Hash::make('password'),
+                'level' => UserRole::MANAGER->value,
+                'manager_category_id' => ManagerCategory::JANGMED->value,
+                'kode_sign' => Hash::make('MGR003'),
+                'phone' => '081100000007',
                 'instansi' => 'wiradadi',
                 'unit_id' => $wiradadiOps?->id,
                 'verified_at' => $now,

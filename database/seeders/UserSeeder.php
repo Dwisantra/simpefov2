@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\ManagerCategory;
 use App\Enums\UserRole;
 use App\Models\Unit;
 use Illuminate\Database\Seeder;
@@ -41,9 +42,11 @@ class UserSeeder extends Seeder
 
         // Admin (akses penuh)
         User::updateOrCreate(
-            ['email' => 'admin@example.com'],
+            ['username' => 'admin'],
             [
+                'username' => 'admin',
                 'name' => 'Admin Sistem',
+                'email' => 'admin@example.com',
                 'password' => Hash::make('password'),
                 'level' => UserRole::ADMIN->value,
                 'kode_sign' => Hash::make('ADM001'),
@@ -56,11 +59,14 @@ class UserSeeder extends Seeder
 
         // Manager (review & acc sebelum direktur)
         User::updateOrCreate(
-            ['email' => 'manager@example.com'],
+            ['username' => 'manager.yanmum'],
             [
-                'name' => 'Manager Fitur',
+                'username' => 'manager.yanmum',
+                'name' => 'Manager yanmum',
+                'email' => 'manager.yanmum@example.com',
                 'password' => Hash::make('password'),
                 'level' => UserRole::MANAGER->value,
+                'manager_category_id' => ManagerCategory::YANMUM->value,
                 'kode_sign' => Hash::make('MGR001'),
                 'phone' => '081200000002',
                 'instansi' => 'wiradadi',
@@ -69,11 +75,47 @@ class UserSeeder extends Seeder
             ]
         );
 
+        User::updateOrCreate(
+            ['username' => 'manager.yanmed'],
+            [
+                'username' => 'manager.yanmed',
+                'name' => 'Manager Yanmed',
+                'email' => 'manager.yanmed@example.com',
+                'password' => Hash::make('password'),
+                'level' => UserRole::MANAGER->value,
+                'manager_category_id' => ManagerCategory::YANMED->value,
+                'kode_sign' => Hash::make('MGR002'),
+                'phone' => '081200000006',
+                'instansi' => 'wiradadi',
+                'unit_id' => $wiradadiOps?->id,
+                'verified_at' => $now,
+            ]
+        );
+
+        User::updateOrCreate(
+            ['username' => 'manager.jangmed'],
+            [
+                'username' => 'manager.jangmed',
+                'name' => 'Manager Jangmed',
+                'email' => 'manager.jangmed@example.com',
+                'password' => Hash::make('password'),
+                'level' => UserRole::MANAGER->value,
+                'manager_category_id' => ManagerCategory::JANGMED->value,
+                'kode_sign' => Hash::make('MGR003'),
+                'phone' => '081200000007',
+                'instansi' => 'wiradadi',
+                'unit_id' => $wiradadiOps?->id,
+                'verified_at' => $now,
+            ]
+        );
+
         // Direktur RS A
         User::updateOrCreate(
-            ['email' => 'direktura@example.com'],
+            ['username' => 'direktura'],
             [
+                'username' => 'direktura',
                 'name' => 'Direktur RS A',
+                'email' => 'direktura@example.com',
                 'password' => Hash::make('password'),
                 'level' => UserRole::DIRECTOR_A->value,
                 'kode_sign' => Hash::make('DIRA01'),
@@ -86,9 +128,11 @@ class UserSeeder extends Seeder
 
         // Direktur RS B
         User::updateOrCreate(
-            ['email' => 'direkturb@example.com'],
+            ['username' => 'direkturb'],
             [
+                'username' => 'direkturb',
                 'name' => 'Direktur RS B',
+                'email' => 'direkturb@example.com',
                 'password' => Hash::make('password'),
                 'level' => UserRole::DIRECTOR_B->value,
                 'kode_sign' => Hash::make('DIRB01'),
@@ -101,9 +145,11 @@ class UserSeeder extends Seeder
 
         // User (pengaju request)
         User::updateOrCreate(
-            ['email' => 'user@example.com'],
+            ['username' => 'user.pemohon'],
             [
+                'username' => 'user.pemohon',
                 'name' => 'User Pemohon',
+                'email' => 'user@example.com',
                 'password' => Hash::make('password'),
                 'level' => UserRole::USER->value,
                 'kode_sign' => Hash::make('USR001'),

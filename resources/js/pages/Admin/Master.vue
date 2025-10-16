@@ -7,7 +7,7 @@
         <h2 class="fw-semibold mb-1">Master Data Sistem</h2>
         <p class="text-muted mb-0">
           Kelola unit layanan, verifikasi akun pengguna, dan tentukan role akses untuk memastikan alur
-          tiket berjalan rapi.
+          ticket berjalan rapi.
         </p>
       </div>
       <div class="text-muted small">
@@ -51,6 +51,23 @@
                     :disabled="savingUnit"
                   >
                     <option v-for="option in instansiOptions" :key="option.value" :value="option.value">
+                      {{ option.label }}
+                    </option>
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label for="unitManagerCategory" class="form-label">Kategori Manager</label>
+                  <select
+                    id="unitManagerCategory"
+                    v-model.number="unitForm.manager_category_id"
+                    class="form-select"
+                    :disabled="savingUnit"
+                  >
+                    <option
+                      v-for="option in managerCategoryOptions"
+                      :key="`unit-manager-cat-${option.value}`"
+                      :value="option.value"
+                    >
                       {{ option.label }}
                     </option>
                   </select>
@@ -100,13 +117,14 @@
                   <tr>
                     <th>Unit</th>
                     <th>Instansi</th>
+                    <th>Kategori Manager</th>
                     <th>Status</th>
                     <th class="text-center">Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-if="!loadingUnits && units.length === 0">
-                    <td colspan="4" class="text-center text-muted py-4">
+                    <td colspan="5" class="text-center text-muted py-4">
                       Belum ada unit terdaftar. Tambahkan unit pertama melalui formulir di samping.
                     </td>
                   </tr>
@@ -117,6 +135,9 @@
                     </td>
                     <td>
                       <span class="badge bg-primary-subtle text-primary">{{ instansiLabel(unit.instansi) }}</span>
+                    </td>
+                    <td>
+                      <span class="badge bg-info-subtle text-info">{{ unit.manager_category_label || '-' }}</span>
                     </td>
                     <td>
                       <span
@@ -234,6 +255,7 @@
                 <th>Instansi</th>
                 <th>Unit</th>
                 <th>Role</th>
+                <th>Kategori Manager</th>
                 <th>Status</th>
                 <th class="text-center">Aksi</th>
               </tr>
@@ -247,6 +269,7 @@
               <tr v-for="user in users" :key="user.id">
                 <td>
                   <div class="fw-semibold">{{ user.name }}</div>
+                  <div class="text-info small">{{ user.username }}</div>
                   <div class="text-muted small">{{ user.email }}</div>
                 </td>
                 <td style="min-width: 160px;">
@@ -290,6 +313,24 @@
                       {{ option.label }}
                     </option>
                   </select>
+                </td>
+                <td style="min-width: 200px;">
+                  <select
+                    v-if="Number(user.level) === ROLE.MANAGER"
+                    class="form-select form-select-sm"
+                    :value="user.manager_category_id || managerCategoryOptions[0]?.value"
+                    :disabled="userSaving[user.id]"
+                    @change="changeUserManagerCategory(user, $event.target.value)"
+                  >
+                    <option
+                      v-for="option in managerCategoryOptions"
+                      :key="`manager-cat-${option.value}`"
+                      :value="option.value"
+                    >
+                      {{ option.label }}
+                    </option>
+                  </select>
+                  <span v-else class="text-muted small">-</span>
                 </td>
                 <td>
                   <span class="badge" :class="verifiedBadgeClass(user.is_verified)">
@@ -374,6 +415,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { ROLE } from '@/constants/roles'
 import { useAdminMaster } from '@/ticketing/composables'
 
 const {
@@ -403,12 +445,14 @@ const {
   changeUserInstansi,
   changeUserUnit,
   changeUserRole,
+  changeUserManagerCategory,
   toggleUserVerification,
   verifiedBadgeClass,
   changeUnitPage,
   changeUserPage,
   updateUnitPerPage,
-  updateUserPerPage
+  updateUserPerPage,
+  managerCategoryOptions
 } = useAdminMaster()
 
 const combinedLoading = computed(() => loadingUnits.value || loadingUsers.value)

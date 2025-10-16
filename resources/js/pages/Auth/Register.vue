@@ -5,7 +5,7 @@
         <div class="col-lg-6 d-none d-lg-block">
           <div class="auth-illustration">
             <span class="badge rounded-pill text-bg-light auth-badge">Akun Terproteksi</span>
-            <h1 class="display-6 fw-semibold mt-4 mb-3">Mulai ajukan dan setujui permintaan form SIMGOS secara digital.</h1>
+            <h1 class="display-6 fw-semibold mt-4 mb-3">Mulai ajukan dan setujui pengajuan form SIMGOS secara digital.</h1>
             <p class="auth-copy">
               Setiap tanda tangan digital dienkripsi dengan hash unik dan URL berbasis UUID untuk keamanan maksimal.
             </p>
@@ -27,6 +27,17 @@
                 <div class="mb-3">
                   <label class="form-label">Nama Lengkap</label>
                   <input v-model="name" class="form-control" placeholder="Contoh: Nama Lengkap" required />
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Username</label>
+                  <input
+                    v-model="username"
+                    class="form-control"
+                    placeholder="Gunakan huruf, angka, atau tanda hubung"
+                    autocomplete="username"
+                    required
+                  />
+                  <small class="text-muted">Username dipakai saat login, contoh: user_name.</small>
                 </div>
                 <div class="mb-3">
                   <label class="form-label">Email</label>
@@ -190,6 +201,7 @@ import { useRegisterForm } from '@/ticketing/composables'
 
 const {
   name,
+  username,
   email,
   password,
   passwordConfirmation,

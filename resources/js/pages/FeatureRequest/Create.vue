@@ -6,9 +6,9 @@
           <div class="card-body p-4 p-lg-5">
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4 form-header">
               <div class="form-intro">
-                <h2 class="fw-semibold mb-1">Pengajuan Permintaan Form</h2>
+                <h2 class="fw-semibold mb-1">Pengajuan Form</h2>
                 <p class="text-muted mb-0">
-                  Lengkapi informasi form dan konfirmasi dengan kode ACC Anda untuk mengirimkan tiket pengajuan.
+                  Lengkapi informasi form dan konfirmasi dengan kode ACC Anda untuk mengirimkan ticket pengajuan.
                 </p>
               </div>
               <router-link to="/feature-request" class="btn btn-danger border back-button">Kembali</router-link>
@@ -16,7 +16,7 @@
 
             <form @submit.prevent="submit" class="row g-4">
               <div class="col-12">
-                <label class="form-label">Jenis Permintaan</label>
+                <label class="form-label">Jenis Pengajuan</label>
                 <div class="request-type-grid">
                   <label
                     v-for="option in requestTypeOptions"
@@ -27,7 +27,7 @@
                     <span>{{ option.label }}</span>
                   </label>
                 </div>
-                <small class="text-muted d-block mt-1">Pilih minimal satu jenis permintaan.</small>
+                <small class="text-muted d-block mt-1">Pilih minimal satu jenis pengajuan.</small>
               </div>
 
               <div class="col-12">
@@ -83,7 +83,7 @@
                 <div class="p-4 bg-light rounded-4 border">
                   <h5 class="fw-semibold">Konfirmasi Pemohon</h5>
                   <p class="text-muted mb-3 small">
-                    Sebagai pemohon Anda perlu memasukkan kode ACC pribadi sebagai tanda tangan digital sebelum tiket diproses.
+                    Sebagai pemohon Anda perlu memasukkan kode ACC pribadi sebagai tanda tangan digital sebelum ticket diproses.
                   </p>
                   <input
                     v-model="signCode"
@@ -119,10 +119,10 @@
           <div class="card-body p-4 p-lg-5 text-center">
             <h2 class="fw-semibold mb-3">Akses Pengajuan Terbatas</h2>
             <p class="text-muted mb-4">
-              Hanya pemohon yang dapat mengajukan tiket permintaan form baru. Silakan hubungi pemohon jika Anda perlu
+              Hanya pemohon yang dapat mengajukan ticket pengajuan form baru. Silakan hubungi pemohon jika Anda perlu
               memulai proses pengajuan.
             </p>
-            <router-link to="/feature-request" class="btn btn-outline-primary px-4">Kembali ke Daftar Tiket</router-link>
+            <router-link to="/feature-request" class="btn btn-outline-primary px-4">Kembali ke Daftar Ticket</router-link>
           </div>
         </div>
       </div>

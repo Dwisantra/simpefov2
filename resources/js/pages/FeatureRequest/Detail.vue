@@ -2,11 +2,11 @@
   <div class="detail-wrapper">
     <div v-if="loading" class="text-center py-5">
       <div class="spinner-border text-primary" role="status"></div>
-      <p class="text-muted mt-3">Memuat detail tiket...</p>
+      <p class="text-muted mt-3">Memuat detail ticket...</p>
     </div>
 
     <div v-else-if="!feature" class="alert alert-danger">
-      Data tiket tidak ditemukan.
+      Data ticket tidak ditemukan.
     </div>
 
     <div v-else class="row g-4">
@@ -99,9 +99,9 @@
             <div v-if="feature.attachment_url" class="attachment-panel mt-5 p-4 border rounded-4 bg-light">
               <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
                 <div>
-                  <h6 class="fw-semibold mb-1">Lampiran Permintaan</h6>
+                  <h6 class="fw-semibold mb-1">Lampiran Pengajuan</h6>
                   <p class="text-muted small mb-0">Berkas pendukung dari pemohon untuk pertimbangan tambahan.</p>
-                  <p class="text-muted small mb-0 mt-1">{{ feature.attachment_name || 'Lampiran permintaan' }}</p>
+                  <p class="text-muted small mb-0 mt-1">{{ feature.attachment_name || 'Lampiran pengajuan' }}</p>
                 </div>
                 <button
                   type="button"
@@ -188,9 +188,9 @@
       <div v-if="isAdmin" class="col-lg-6">
         <div class="card border-0 shadow-sm rounded-4 h-100">
           <div class="card-body p-4">
-            <h5 class="fw-semibold mb-3">Kelola Tiket</h5>
+            <h5 class="fw-semibold mb-3">Kelola Ticket</h5>
             <p class="text-muted small mb-4">
-              Tetapkan prioritas tindak lanjut, tandai progres pengerjaan, dan hapus tiket jika pengajuan dibatalkan.
+              Tetapkan prioritas tindak lanjut, tandai progres pengerjaan, dan hapus ticket jika pengajuan dibatalkan.
             </p>
 
             <div class="gitlab-sync-panel border rounded-4 p-3 mb-4">
@@ -215,7 +215,7 @@
                     <span v-if="gitlabSyncedAtLabel" class="d-block mt-2">Sinkron terakhir {{ gitlabSyncedAtLabel }}</span>
                   </div>
                   <div v-else class="text-muted small fst-italic">
-                    Belum ada issue GitLab untuk tiket ini.
+                    Belum ada issue GitLab untuk ticket ini.
                   </div>
                 </div>
                 <div class="gitlab-sync-actions d-flex flex-column align-items-end gap-2">
@@ -294,7 +294,7 @@
           <div v-if="deleteError" class="alert alert-danger py-2">{{ deleteError }}</div>
 
             <div class="mb-3">
-              <label class="form-label">Prioritas Tiket</label>
+              <label class="form-label">Prioritas Ticket</label>
               <select v-model="selectedPriority" class="form-select">
                 <option v-for="option in priorityOptions" :key="option.value" :value="option.value">
                   {{ option.label }}
@@ -319,7 +319,7 @@
                 @click="deleteFeature"
               >
                 <span v-if="deleteLoading" class="spinner-border spinner-border-sm me-2"></span>
-                Hapus Tiket
+                Hapus Ticket
               </button>
             </div>
           </div>
@@ -374,7 +374,7 @@
             </div>
 
             <div v-if="comments.length === 0" class="text-muted small fst-italic">
-              Belum ada komentar admin untuk tiket ini.
+              Belum ada komentar admin untuk ticket ini.
             </div>
 
             <ul v-else class="list-unstyled mb-0 d-grid gap-3">
@@ -429,7 +429,7 @@
             <div class="attachment-viewer-header card-header d-flex justify-content-between align-items-start gap-3">
               <div>
                 <h6 class="mb-1">Pratinjau Lampiran</h6>
-                <p class="text-muted small mb-0">{{ feature?.attachment_name || 'Lampiran permintaan' }}</p>
+                <p class="text-muted small mb-0">{{ feature?.attachment_name || 'Lampiran pengajuan' }}</p>
                 <p v-if="attachmentPreviewType" class="text-muted small mb-0">
                   Jenis berkas: {{ attachmentPreviewType }}
                 </p>
@@ -440,7 +440,7 @@
               <template v-if="isAttachmentImage">
                 <img
                   :src="attachmentPreviewUrl"
-                  :alt="feature?.attachment_name || 'Lampiran permintaan'"
+                  :alt="feature?.attachment_name || 'Lampiran pengajuan'"
                   class="img-fluid rounded-3"
                 />
               </template>

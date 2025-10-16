@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\ManagerCategory;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\Unit;
@@ -15,7 +16,7 @@ class UserManagementController extends Controller
     {
         $this->ensureAdmin($request);
 
-        $perPage = (int) $request->integer('per_page', 10);
+        $perPage = (int) $request->integer('per_page', 5);
         $perPage = max(1, min($perPage, 50));
 
         return User::with('unit')
@@ -27,13 +28,17 @@ class UserManagementController extends Controller
     {
         $this->ensureAdmin($request);
 
-        $roleValues = array_map(fn (UserRole $role) => $role->value, UserRole::cases());
-
+        $roleValues = array_map(fn(UserRole $role) => $role->value, UserRole::cases());
         $data = $request->validate([
             'level' => ['sometimes', 'required', 'integer', Rule::in($roleValues)],
             'instansi' => ['sometimes', 'required', Rule::in(['wiradadi', 'raffa'])],
             'unit_id' => ['nullable', Rule::exists('units', 'id')],
             'is_verified' => ['sometimes', 'boolean'],
+            'manager_category_id' => [
+                'nullable',
+                'integer',
+                Rule::in(array_map(fn(ManagerCategory $category) => $category->value, ManagerCategory::cases())),
+            ],
         ]);
 
         $targetInstansi = $data['instansi'] ?? $user->instansi;
@@ -55,6 +60,24 @@ class UserManagementController extends Controller
 
         if (array_key_exists('level', $data)) {
             $user->level = $data['level'];
+        }
+
+        $targetRole = UserRole::tryFromMixed($user->level);
+
+        if ($targetRole?->value === UserRole::MANAGER->value) {
+            $incomingCategory = array_key_exists('manager_category_id', $data)
+                ? ManagerCategory::tryFromMixed($data['manager_category_id'])
+                : ManagerCategory::tryFromMixed($user->manager_category_id);
+
+            if (! $incomingCategory) {
+                return response()->json([
+                    'message' => 'Kategori manager harus dipilih.',
+                ], 422);
+            }
+
+            $user->manager_category_id = $incomingCategory->value;
+        } else {
+            $user->manager_category_id = null;
         }
 
         if (array_key_exists('is_verified', $data)) {

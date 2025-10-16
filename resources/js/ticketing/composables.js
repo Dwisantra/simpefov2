@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import axios from '@/lib/axios'
 import { useAuthStore } from '@/stores/auth'
 import { ROLE, ROLE_LABELS, ROLE_OPTIONS, isRole } from '@/constants/roles'
+import { MANAGER_CATEGORY, MANAGER_CATEGORY_OPTIONS } from '@/constants/managerCategories'
 
 const roleLabels = ROLE_LABELS
 
@@ -47,6 +48,23 @@ const resolveDevelopmentStatusBadgeClass = (statusId) =>
 const resolveDevelopmentStatusLabel = (statusId) =>
   developmentStatusRegistry[statusId]?.label ?? ''
 
+const PRIORITY_OPTIONS = Object.freeze([
+  { value: 'biasa', label: 'Prioritas Biasa' },
+  { value: 'sedang', label: 'Prioritas Sedang' },
+  { value: 'cito', label: 'Prioritas Cito' }
+])
+
+const resolvePriorityBadgeClass = (priority) => {
+  switch (priority) {
+    case 'cito':
+      return 'bg-danger-subtle text-danger'
+    case 'sedang':
+      return 'bg-warning-subtle text-warning'
+    default:
+      return 'bg-secondary-subtle text-secondary'
+  }
+}
+
 const formatDateTime = (date) => {
   if (!date) return '-'
   return new Date(date).toLocaleString('id-ID', {
@@ -77,6 +95,11 @@ export function useAppShell() {
   const roleLabel = computed(() => roleLabels[userRole.value] ?? 'Pengguna')
   const canRequest = computed(() => isRole(userRole.value, ROLE.USER))
   const isAdmin = computed(() => isRole(userRole.value, ROLE.ADMIN))
+  const isManager = computed(() => isRole(userRole.value, ROLE.MANAGER))
+  const managerCategoryId = computed(() => Number(auth.user?.manager_category_id ?? 0))
+  const isJangmedManager = computed(
+    () => isManager.value && managerCategoryId.value === MANAGER_CATEGORY.JANGMED
+  )
 
   const ensureModalInstance = () => {
     if (kodeSignModal.value && !modalInstance) {
@@ -189,6 +212,7 @@ export function useAppShell() {
     roleLabel,
     canRequest,
     isAdmin,
+    isJangmedManager,
     kodeSign,
     kodeSignError,
     kodeSignSuccess,
@@ -208,7 +232,7 @@ export function useLoginForm() {
   const auth = useAuthStore()
   const router = useRouter()
 
-  const email = ref('')
+  const username = ref('')
   const password = ref('')
   const showPassword = ref(false)
   const loading = ref(false)
@@ -221,14 +245,17 @@ export function useLoginForm() {
   const submit = async () => {
     error.value = ''
 
-    if (!email.value || !password.value) {
-      error.value = 'Masukkan email dan password Anda.'
+    const normalizedUsername = username.value.trim().toLowerCase()
+
+    if (!normalizedUsername || !password.value) {
+      error.value = 'Masukkan username dan password Anda.'
       return
     }
 
     try {
       loading.value = true
-      await auth.login(email.value, password.value)
+      username.value = normalizedUsername
+      await auth.login(username.value, password.value)
       router.push('/feature-request')
     } catch (err) {
       error.value = err?.response?.data?.message ?? 'Login gagal. Periksa kembali data Anda.'
@@ -238,7 +265,7 @@ export function useLoginForm() {
   }
 
   return {
-    email,
+    username,
     password,
     showPassword,
     loading,
@@ -252,6 +279,7 @@ export function useRegisterForm() {
   const router = useRouter()
 
   const name = ref('')
+  const username = ref('')
   const email = ref('')
   const password = ref('')
   const passwordConfirmation = ref('')
@@ -301,6 +329,7 @@ export function useRegisterForm() {
 
     if (
       !name.value ||
+      !username.value ||
       !email.value ||
       !password.value ||
       !passwordConfirmation.value ||
@@ -312,6 +341,21 @@ export function useRegisterForm() {
     }
 
     const passwordCombination = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/
+    const usernamePattern = /^[A-Za-z0-9_-]+$/
+
+    const normalizedUsername = username.value.trim().toLowerCase()
+
+    if (!normalizedUsername) {
+      error.value = 'Username wajib diisi.'
+      return
+    }
+
+    if (!usernamePattern.test(normalizedUsername)) {
+      error.value = 'Username hanya boleh berisi huruf, angka, garis bawah, dan tanda hubung.'
+      return
+    }
+
+    username.value = normalizedUsername
 
     if (!passwordCombination.test(password.value)) {
       error.value = 'Password harus minimal 8 karakter dan mengandung kombinasi huruf serta angka.'
@@ -327,6 +371,7 @@ export function useRegisterForm() {
       loading.value = true
       await axios.post('/register', {
         name: name.value,
+        username: username.value,
         email: email.value,
         password: password.value,
         password_confirmation: passwordConfirmation.value,
@@ -348,6 +393,7 @@ export function useRegisterForm() {
 
   return {
     name,
+    username,
     email,
     password,
     phone,
@@ -367,6 +413,7 @@ export function useFeatureRequestIndex() {
   const auth = useAuthStore()
   const loading = ref(false)
   const perPage = ref(10)
+  const stage = ref('submission')
   const pagination = ref({
     data: [],
     current_page: 1,
@@ -380,6 +427,20 @@ export function useFeatureRequestIndex() {
   const userRole = computed(() => Number(auth.user?.level ?? auth.user?.role ?? 0))
 
   const requests = computed(() => pagination.value.data ?? [])
+
+  const stageOptions = [
+    { value: 'submission', label: 'Tahap Pengajuan' },
+    { value: 'development', label: 'Tahap Pengerjaan' }
+  ]
+
+  const stageCopy = {
+    submission:
+      'Pantau ticket yang sedang melalui proses pengajuan dan membutuhkan tindak lanjut.',
+    development:
+      'Lihat ticket yang sudah selesai tahap pengajuan dan sedang ditangani oleh tim IT.'
+  }
+
+  const stageDescription = computed(() => stageCopy[stage.value] ?? '')
 
   const statusLabel = (value) => {
     if (!value && value !== 0) {
@@ -411,16 +472,7 @@ export function useFeatureRequestIndex() {
     }
   }
 
-  const priorityBadgeClass = (priority) => {
-    switch (priority) {
-      case 'cito':
-        return 'bg-danger-subtle text-danger'
-      case 'sedang':
-        return 'bg-warning-subtle text-warning'
-      default:
-        return 'bg-secondary-subtle text-secondary'
-    }
-  }
+  const priorityBadgeClass = (priority) => resolvePriorityBadgeClass(priority)
 
   const baseTotalSteps = 4
 
@@ -517,10 +569,10 @@ export function useFeatureRequestIndex() {
 
   const pageSummary = computed(() => {
     if (!pageMeta.value.total) {
-      return 'Tidak ada tiket yang ditampilkan.'
+      return 'Tidak ada ticket yang ditampilkan.'
     }
 
-    return `Menampilkan ${pageMeta.value.from}-${pageMeta.value.to} dari ${pageMeta.value.total} tiket`
+    return `Menampilkan ${pageMeta.value.from}-${pageMeta.value.to} dari ${pageMeta.value.total} ticket`
   })
 
   const loadRequests = async (page = 1) => {
@@ -529,7 +581,8 @@ export function useFeatureRequestIndex() {
       const { data } = await axios.get('/feature-requests', {
         params: {
           page,
-          per_page: perPage.value
+          per_page: perPage.value,
+          stage: stage.value
         }
       })
 
@@ -571,11 +624,26 @@ export function useFeatureRequestIndex() {
     }
   )
 
+  watch(stage, () => {
+    loadRequests(1)
+  })
+
   const canCreate = computed(() => isRole(userRole.value, ROLE.USER))
   const isAdmin = computed(() => isRole(userRole.value, ROLE.ADMIN))
   const developmentStatusBadgeClass = (statusId) => resolveDevelopmentStatusBadgeClass(statusId)
 
   const perPageOptions = [5, 10, 20, 50]
+
+  const setStage = (value) => {
+    if (stage.value === value) {
+      return
+    }
+
+    const option = stageOptions.find((item) => item.value === value)
+    if (option) {
+      stage.value = option.value
+    }
+  }
 
   return {
     requests,
@@ -597,6 +665,10 @@ export function useFeatureRequestIndex() {
     nextPage,
     previousPage,
     loadRequests,
+    stage,
+    stageOptions,
+    stageDescription,
+    setStage,
     formatDate: formatDateTime,
     instansiLabel,
     canCreate,
@@ -706,7 +778,7 @@ export function useFeatureRequestCreate() {
     message.value = ''
 
     if (!canSubmit.value) {
-      message.value = 'Hanya pemohon yang dapat mengajukan tiket baru.'
+      message.value = 'Hanya pemohon yang dapat mengajukan ticket baru.'
       messageType.value = 'error'
       return
     }
@@ -718,7 +790,7 @@ export function useFeatureRequestCreate() {
     }
 
     if (requestTypes.value.length === 0) {
-      message.value = 'Pilih minimal satu jenis permintaan.'
+      message.value = 'Pilih minimal satu jenis pengajuan.'
       messageType.value = 'error'
       return
     }
@@ -947,7 +1019,7 @@ export function useFeatureRequestDetail() {
       {
         role: ROLE.USER,
         title: 'Pengajuan Pemohon',
-        description: 'Pemohon mengisi detail permintaan dan mengesahkan dengan kode ACC.'
+        description: 'Pemohon mengisi detail pengajuan dan mengesahkan dengan kode ACC.'
       },
       {
         role: ROLE.MANAGER,
@@ -1029,22 +1101,9 @@ export function useFeatureRequestDetail() {
     return formatDateTime(gitlabIssue.value.synced_at)
   })
 
-  const priorityOptions = [
-    { value: 'biasa', label: 'Prioritas Biasa' },
-    { value: 'sedang', label: 'Prioritas Sedang' },
-    { value: 'cito', label: 'Prioritas Cito' }
-  ]
+  const priorityOptions = PRIORITY_OPTIONS
 
-  const priorityBadgeClass = (priority) => {
-    switch (priority) {
-      case 'cito':
-        return 'bg-danger-subtle text-danger'
-      case 'sedang':
-        return 'bg-warning-subtle text-warning'
-      default:
-        return 'bg-secondary-subtle text-secondary'
-    }
-  }
+  const priorityBadgeClass = (priority) => resolvePriorityBadgeClass(priority)
 
   watch(
     () => feature.value?.priority,
@@ -1086,7 +1145,7 @@ export function useFeatureRequestDetail() {
 
   const approvalHint = computed(() => {
     if (!feature.value) {
-      return 'Data tiket tidak ditemukan.'
+      return 'Data ticket tidak ditemukan.'
     }
 
     const requiredRole = currentStageRole.value
@@ -1190,7 +1249,7 @@ export function useFeatureRequestDetail() {
     }
 
     if (!feature.value?.id) {
-      attachmentError.value = 'Data tiket tidak tersedia untuk diunduh.'
+      attachmentError.value = 'Data ticket tidak tersedia untuk diunduh.'
       if (typeof window !== 'undefined') {
         window.alert(attachmentError.value)
       }
@@ -1217,7 +1276,7 @@ export function useFeatureRequestDetail() {
       const downloadUrl = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = downloadUrl
-      link.download = feature.value.attachment_name || 'lampiran-permintaan'
+      link.download = feature.value.attachment_name || 'lampiran-pengajuan'
       document.body.appendChild(link)
       link.click()
       link.remove()
@@ -1275,7 +1334,7 @@ export function useFeatureRequestDetail() {
     }
 
     if (!featureId) {
-      const message = 'Data tiket tidak ditemukan untuk mengunduh lampiran komentar.'
+      const message = 'Data ticket tidak ditemukan untuk mengunduh lampiran komentar.'
       setCommentDownloadError(commentId, message)
       if (typeof window !== 'undefined') {
         window.alert(message)
@@ -1331,7 +1390,7 @@ export function useFeatureRequestDetail() {
     }
 
     if (!feature.value?.id) {
-      attachmentError.value = 'Data tiket tidak tersedia untuk dilihat.'
+      attachmentError.value = 'Data ticket tidak tersedia untuk dilihat.'
       if (typeof window !== 'undefined') {
         window.alert(attachmentError.value)
       }
@@ -1440,7 +1499,7 @@ export function useFeatureRequestDetail() {
     }
 
     if (!feature.value) {
-      commentError.value = 'Data tiket tidak ditemukan.'
+      commentError.value = 'Data ticket tidak ditemukan.'
       return
     }
 
@@ -1481,7 +1540,7 @@ export function useFeatureRequestDetail() {
     }
 
     if (!feature.value) {
-      priorityError.value = 'Data tiket tidak ditemukan.'
+      priorityError.value = 'Data ticket tidak ditemukan.'
       return
     }
 
@@ -1491,7 +1550,7 @@ export function useFeatureRequestDetail() {
         priority: selectedPriority.value
       })
       feature.value = data
-      prioritySuccess.value = 'Prioritas tiket berhasil diperbarui.'
+      prioritySuccess.value = 'Prioritas ticket berhasil diperbarui.'
     } catch (error) {
       priorityError.value = error?.response?.data?.message ?? 'Gagal memperbarui prioritas.'
     } finally {
@@ -1509,7 +1568,7 @@ export function useFeatureRequestDetail() {
     }
 
     if (!feature.value) {
-      developmentStatusError.value = 'Data tiket tidak ditemukan.'
+      developmentStatusError.value = 'Data ticket tidak ditemukan.'
       return
     }
 
@@ -1531,7 +1590,7 @@ export function useFeatureRequestDetail() {
     attachmentError.value = ''
 
     if (!feature.value?.attachment_url) {
-      attachmentError.value = 'Lampiran tidak tersedia untuk tiket ini.'
+      attachmentError.value = 'Lampiran tidak tersedia untuk ticket ini.'
       return
     }
 
@@ -1545,7 +1604,7 @@ export function useFeatureRequestDetail() {
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = feature.value.attachment_name || 'lampiran-tiket'
+      link.download = feature.value.attachment_name || 'lampiran-ticket'
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
@@ -1582,7 +1641,7 @@ export function useFeatureRequestDetail() {
     }
 
     if (!feature.value) {
-      gitlabError.value = 'Data tiket tidak ditemukan.'
+      gitlabError.value = 'Data ticket tidak ditemukan.'
       return
     }
 
@@ -1603,16 +1662,16 @@ export function useFeatureRequestDetail() {
     deleteError.value = ''
 
     if (!isAdmin.value) {
-      deleteError.value = 'Hanya admin yang dapat menghapus tiket.'
+      deleteError.value = 'Hanya admin yang dapat menghapus ticket.'
       return
     }
 
     if (!feature.value) {
-      deleteError.value = 'Data tiket tidak ditemukan.'
+      deleteError.value = 'Data  tidak ditemukan.'
       return
     }
 
-    const confirmed = window.confirm('Yakin ingin menghapus tiket ini? Tindakan tidak dapat dibatalkan.')
+    const confirmed = window.confirm('Yakin ingin menghapus ticket ini? Tindakan tidak dapat dibatalkan.')
     if (!confirmed) {
       return
     }
@@ -1622,7 +1681,7 @@ export function useFeatureRequestDetail() {
       await axios.delete(`/feature-requests/${feature.value.id}`)
       router.push('/feature-request')
     } catch (error) {
-      deleteError.value = error?.response?.data?.message ?? 'Gagal menghapus tiket.'
+      deleteError.value = error?.response?.data?.message ?? 'Gagal menghapus ticket.'
     } finally {
       deleteLoading.value = false
     }
@@ -1728,6 +1787,183 @@ export function useFeatureRequestDetail() {
   }
 }
 
+export function useJangmedPriorities() {
+  const loading = ref(false)
+  const items = ref([])
+  const perPage = ref(10)
+  const scope = ref('active')
+  const pagination = reactive({
+    currentPage: 1,
+    lastPage: 1,
+    total: 0,
+    from: 0,
+    to: 0
+  })
+  const message = ref('')
+  const messageType = ref('info')
+  const rowSaving = reactive({})
+  const localPriorities = reactive({})
+
+  const priorityOptions = PRIORITY_OPTIONS
+  const priorityBadgeClass = (priority) => resolvePriorityBadgeClass(priority)
+  const scopeOptions = Object.freeze([
+    { value: 'active', label: 'Sedang Dikerjakan' },
+    { value: 'completed', label: 'Selesai' }
+  ])
+
+  const setMessage = (type, value) => {
+    messageType.value = type
+    message.value = value
+    if (value) {
+      setTimeout(() => {
+        message.value = ''
+      }, 3500)
+    }
+  }
+
+  const syncLocalPriorities = () => {
+    Object.keys(localPriorities).forEach((key) => {
+      delete localPriorities[key]
+    })
+
+    items.value.forEach((item) => {
+      localPriorities[item.id] = item.priority ?? 'biasa'
+    })
+  }
+
+  const setRowSaving = (id, state) => {
+    rowSaving[id] = state
+  }
+
+  const mergeItem = (updated) => {
+    items.value = items.value.map((item) => (item.id === updated.id ? updated : item))
+    localPriorities[updated.id] = updated.priority ?? 'biasa'
+  }
+
+  const loadItems = async (page = pagination.currentPage) => {
+    loading.value = true
+    try {
+      const { data } = await axios.get('/manager/jangmed/priorities', {
+        params: {
+          page,
+          per_page: perPage.value,
+          scope: scope.value
+        }
+      })
+
+      const list = data?.data ?? []
+      items.value = list
+      pagination.currentPage = Number(data?.current_page) || page
+      pagination.lastPage = Number(data?.last_page) || 1
+      pagination.total = Number(data?.total) || list.length
+      pagination.from = Number(data?.from) || (list.length ? 1 : 0)
+      pagination.to = Number(data?.to) || list.length
+      syncLocalPriorities()
+    } catch (error) {
+      items.value = []
+      pagination.currentPage = 1
+      pagination.lastPage = 1
+      pagination.total = 0
+      pagination.from = 0
+      pagination.to = 0
+      setMessage('danger', error?.response?.data?.message ?? 'Gagal memuat daftar prioritas.')
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const changePage = (page) => {
+    if (page < 1 || page > pagination.lastPage || page === pagination.currentPage) {
+      return
+    }
+    loadItems(page)
+  }
+
+  const nextPage = () => changePage(pagination.currentPage + 1)
+  const previousPage = () => changePage(pagination.currentPage - 1)
+
+  const pageNumbers = computed(() => {
+    const pages = []
+    for (let i = 1; i <= pagination.lastPage; i += 1) {
+      pages.push(i)
+    }
+    return pages
+  })
+
+  const setScope = (value) => {
+    if (!value || scope.value === value) {
+      return
+    }
+
+    const option = scopeOptions.find((item) => item.value === value)
+
+    if (option) {
+      scope.value = option.value
+    }
+  }
+
+  const updatePriority = async (item) => {
+    const selectedPriority = localPriorities[item.id] ?? item.priority ?? 'biasa'
+    setRowSaving(item.id, true)
+    setMessage('', '')
+
+    try {
+      const { data } = await axios.patch(`/manager/jangmed/priorities/${item.id}`, {
+        priority: selectedPriority
+      })
+
+      if (data?.feature) {
+        mergeItem(data.feature)
+      }
+
+      setMessage('success', data?.message ?? 'Prioritas berhasil diperbarui.')
+    } catch (error) {
+      setMessage('danger', error?.response?.data?.message ?? 'Gagal memperbarui prioritas.')
+    } finally {
+      setRowSaving(item.id, false)
+    }
+  }
+
+  watch(perPage, (value, oldValue) => {
+    if (value !== oldValue) {
+      loadItems(1)
+    }
+  })
+
+  watch(scope, (value, oldValue) => {
+    if (value !== oldValue) {
+      pagination.currentPage = 1
+      loadItems(1)
+    }
+  })
+
+  onMounted(() => {
+    loadItems(pagination.currentPage)
+  })
+
+  return {
+    items,
+    loading,
+    perPage,
+    scope,
+    pagination,
+    message,
+    messageType,
+    priorityOptions,
+    priorityBadgeClass,
+    scopeOptions,
+    localPriorities,
+    rowSaving,
+    loadItems,
+    setScope,
+    updatePriority,
+    pageNumbers,
+    changePage,
+    nextPage,
+    previousPage
+  }
+}
+
 export function useAdminMaster() {
   const router = useRouter()
   const auth = useAuthStore()
@@ -1738,12 +1974,13 @@ export function useAdminMaster() {
   ]
 
   const roleOptions = ROLE_OPTIONS
+  const managerCategoryOptions = MANAGER_CATEGORY_OPTIONS
 
   const units = ref([])
   const users = ref([])
   const unitPagination = reactive({
     currentPage: 1,
-    perPage: 10,
+    perPage: 5,
     total: 0,
     lastPage: 1,
     from: 0,
@@ -1772,7 +2009,8 @@ export function useAdminMaster() {
     id: null,
     name: '',
     instansi: instansiOptions[0].value,
-    is_active: true
+    is_active: true,
+    manager_category_id: managerCategoryOptions[0]?.value ?? null
   })
 
   const isEditingUnit = computed(() => unitForm.id !== null)
@@ -1933,6 +2171,7 @@ export function useAdminMaster() {
     unitForm.name = ''
     unitForm.instansi = instansiOptions[0].value
     unitForm.is_active = true
+    unitForm.manager_category_id = managerCategoryOptions[0]?.value ?? null
   }
 
   const startEditUnit = (unit) => {
@@ -1940,6 +2179,8 @@ export function useAdminMaster() {
     unitForm.name = unit.name
     unitForm.instansi = unit.instansi
     unitForm.is_active = !!unit.is_active
+    unitForm.manager_category_id =
+      unit.manager_category_id ?? (managerCategoryOptions[0]?.value ?? null)
   }
 
   const submitUnit = async () => {
@@ -1953,7 +2194,8 @@ export function useAdminMaster() {
     const payload = {
       name: unitForm.name,
       instansi: unitForm.instansi,
-      is_active: unitForm.is_active
+      is_active: unitForm.is_active,
+      manager_category_id: unitForm.manager_category_id
     }
 
     try {
@@ -2101,7 +2343,32 @@ export function useAdminMaster() {
       return
     }
 
-    updateUser(user, { level: normalized }, 'Role pengguna diperbarui.')
+    if (normalized === ROLE.MANAGER) {
+      const selectedCategory =
+        user.manager_category_id || managerCategoryOptions[0]?.value || MANAGER_CATEGORY.YANMUM
+      updateUser(
+        user,
+        { level: normalized, manager_category_id: selectedCategory },
+        'Role pengguna diperbarui.'
+      )
+    } else {
+      updateUser(user, { level: normalized, manager_category_id: null }, 'Role pengguna diperbarui.')
+    }
+  }
+
+  const changeUserManagerCategory = (user, categoryId) => {
+    const parsed = Number(categoryId)
+
+    if (!Number.isFinite(parsed)) {
+      showUserMessage('danger', 'Kategori manager tidak valid.')
+      return
+    }
+
+    updateUser(
+      user,
+      { manager_category_id: parsed },
+      'Kategori manager berhasil diperbarui.'
+    )
   }
 
   const toggleUserVerification = (user) => {
@@ -2118,6 +2385,7 @@ export function useAdminMaster() {
   return {
     instansiOptions,
     roleOptions,
+    managerCategoryOptions,
     units,
     users,
     unitPagination,
@@ -2142,6 +2410,7 @@ export function useAdminMaster() {
     changeUserInstansi,
     changeUserUnit,
     changeUserRole,
+    changeUserManagerCategory,
     toggleUserVerification,
     verifiedBadgeClass,
     changeUnitPage,

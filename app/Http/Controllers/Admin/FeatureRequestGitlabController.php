@@ -112,10 +112,10 @@ class FeatureRequestGitlabController extends Controller
             ->implode(', ');
 
         $descriptionLines = [
-            '### Informasi Permintaan',
-            sprintf('- **ID Tiket:** %s', $featureRequest->id),
+            '### Informasi Pengajuan',
+            sprintf('- **ID Ticket:** %s', $featureRequest->id),
             sprintf('- **Judul:** %s', $featureRequest->title),
-            sprintf('- **Jenis Permintaan:** %s', $requestTypes ?: 'Tidak ditentukan'),
+            sprintf('- **Jenis Pengajuan:** %s', $requestTypes ?: 'Tidak ditentukan'),
             sprintf('- **Prioritas:** %s', $featureRequest->priority_label ?? ucfirst($featureRequest->priority ?? '-')),
             sprintf('- **Status:** %s', $featureRequest->status_label ?? ucfirst($featureRequest->status ?? '-')),
             sprintf('- **Status Pengembangan:** %s', $featureRequest->development_status_label ?? '-'),
@@ -133,7 +133,7 @@ class FeatureRequestGitlabController extends Controller
         }
 
         $descriptionLines[] = '';
-        $descriptionLines[] = sprintf('[Lihat tiket di SIMPEFO](%s)', url(sprintf('/feature-request/%s', $featureRequest->id)));
+        $descriptionLines[] = sprintf('[Lihat ticket di SIMPEFO](%s)', url(sprintf('/feature-request/%s', $featureRequest->id)));
 
         return implode("\n", $descriptionLines);
     }

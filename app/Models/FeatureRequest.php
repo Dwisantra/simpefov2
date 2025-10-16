@@ -32,6 +32,7 @@ class FeatureRequest extends Model
         'request_types',
         'requester_unit',
         'requester_instansi',
+        'manager_category_id',
         'attachment_path',
         'attachment_name',
         'gitlab_issue_id',
@@ -52,12 +53,15 @@ class FeatureRequest extends Model
         'request_types_label',
         'priority_label',
         'development_status_label',
+        'workflow_stage',
+        'workflow_stage_label',
     ];
 
     protected $casts = [
         'request_types' => 'array',
         'gitlab_synced_at' => 'datetime',
         'development_status' => 'integer',
+        'manager_category_id' => 'integer',
     ];
 
     public function approvals()
@@ -184,5 +188,19 @@ class FeatureRequest extends Model
         }
 
         return self::DEVELOPMENT_STATUS_LABELS[$this->development_status] ?? null;
+    }
+
+    public function getWorkflowStageAttribute(): string
+    {
+        return in_array($this->status, ['approved_b', 'done'], true)
+            ? 'development'
+            : 'submission';
+    }
+
+    public function getWorkflowStageLabelAttribute(): string
+    {
+        return $this->workflow_stage === 'development'
+            ? 'Tahap Pengerjaan'
+            : 'Tahap Pengajuan';
     }
 }

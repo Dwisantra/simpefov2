@@ -25,8 +25,14 @@
               </p>
               <form @submit.prevent="submit" novalidate>
                 <div class="mb-3">
-                  <label class="form-label">Email</label>
-                  <input v-model="email" type="email" class="form-control" placeholder="nama@contoh.com" required />
+                  <label class="form-label">Username</label>
+                  <input
+                    v-model="username"
+                    class="form-control"
+                    placeholder="contoh: user_name"
+                    autocomplete="username"
+                    required
+                  />
                 </div>
                 <div class="mb-4">
                   <label class="form-label">Password</label>
@@ -106,6 +112,6 @@
 <script setup>
 import { useLoginForm } from '@/ticketing/composables'
 
-const { email, password, showPassword, loading, error, togglePasswordVisibility, submit } = useLoginForm()
+const { username, password, showPassword, loading, error, togglePasswordVisibility, submit } = useLoginForm()
 </script>
 

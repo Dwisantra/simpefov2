@@ -16,15 +16,43 @@ class FeatureRequestController extends Controller
         $user = $request->user();
 
         $query = FeatureRequest::with([
-                'approvals.user:id,name,level',
-                'user:id,name,level,unit_id,instansi',
-                'user.unit:id,name,instansi',
-            ])
+            'approvals.user:id,name,level',
+            'user:id,name,level,unit_id,instansi',
+            'user.unit:id,name,instansi',
+        ])
             ->withCount('comments')
             ->orderBy('created_at', 'desc');
 
         if ((int) $user->level === UserRole::USER->value) {
             $query->where('user_id', $user->id);
+        }
+
+        if ((int) $user->level === UserRole::MANAGER->value) {
+            $managerCategoryId = (int) ($user->manager_category_id ?? 0);
+
+            if ($managerCategoryId > 0) {
+                $query->where(function ($builder) use ($managerCategoryId) {
+                    $builder
+                        ->where('manager_category_id', $managerCategoryId)
+                        ->orWhere(function ($inner) use ($managerCategoryId) {
+                            $inner
+                                ->whereNull('manager_category_id')
+                                ->whereHas('user.unit', function ($unitQuery) use ($managerCategoryId) {
+                                    $unitQuery->where('manager_category_id', $managerCategoryId);
+                                });
+                        });
+                });
+            } else {
+                $query->whereRaw('0 = 1');
+            }
+        }
+
+        $stage = strtolower((string) $request->query('stage', ''));
+
+        if ($stage === 'submission') {
+            $query->whereIn('status', ['pending', 'approved_manager', 'approved_a']);
+        } elseif ($stage === 'development') {
+            $query->whereIn('status', ['approved_b', 'done']);
         }
 
         $perPage = max(1, min((int) $request->input('per_page', 10), 50));
@@ -59,7 +87,7 @@ class FeatureRequestController extends Controller
 
         if ((int) $user->level !== UserRole::USER->value) {
             return response()->json([
-                'message' => 'Hanya pemohon yang dapat mengajukan tiket baru.'
+                'message' => 'Hanya pemohon yang dapat mengajukan ticket baru.'
             ], 403);
         }
 
@@ -94,7 +122,7 @@ class FeatureRequestController extends Controller
             'bug_fix' => 'Lapor Bug/Error',
         ];
 
-        $title = 'Permintaan: ' . implode(', ', array_map(fn ($type) => $labels[$type] ?? $type, $requestTypes));
+        $title = 'Pengajuan: ' . implode(', ', array_map(fn($type) => $labels[$type] ?? $type, $requestTypes));
 
         $feature = FeatureRequest::create([
             'user_id' => $user->id,
@@ -106,6 +134,7 @@ class FeatureRequestController extends Controller
             'request_types' => $requestTypes,
             'requester_unit' => $user->unit?->name,
             'requester_instansi' => $user->instansi,
+            'manager_category_id' => $user->unit?->manager_category_id,
             'attachment_path' => $attachmentPath,
             'attachment_name' => $attachmentName,
         ]);
@@ -132,7 +161,7 @@ class FeatureRequestController extends Controller
         $user = $request->user();
 
         if ((int) $user->level === UserRole::USER->value && $featureRequest->user_id !== $user->id) {
-            return response()->json(['message' => 'Anda tidak memiliki akses ke tiket ini.'], 403);
+            return response()->json(['message' => 'Anda tidak memiliki akses ke ticket ini.'], 403);
         }
 
         return $featureRequest
@@ -173,7 +202,7 @@ class FeatureRequestController extends Controller
 
         if ((int) $user->level !== UserRole::ADMIN->value) {
             return response()->json([
-                'message' => 'Hanya admin yang dapat memperbarui tiket.'
+                'message' => 'Hanya admin yang dapat memperbarui ticket.'
             ], 403);
         }
 
@@ -205,7 +234,7 @@ class FeatureRequestController extends Controller
 
         if ((int) $user->level !== UserRole::ADMIN->value) {
             return response()->json([
-                'message' => 'Hanya admin yang dapat menghapus tiket.'
+                'message' => 'Hanya admin yang dapat menghapus ticket.'
             ], 403);
         }
 
@@ -224,7 +253,7 @@ class FeatureRequestController extends Controller
         $featureRequest->delete();
 
         return response()->json([
-            'message' => 'Tiket berhasil dihapus.'
+            'message' => 'Ticket berhasil dihapus.'
         ]);
     }
 }

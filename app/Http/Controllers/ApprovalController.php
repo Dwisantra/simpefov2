@@ -38,7 +38,31 @@ class ApprovalController extends Controller
             ], 422);
         }
 
+        $featureRequest->loadMissing('user.unit');
+
         $requiresDirectorA = $featureRequest->requester_instansi !== 'wiradadi';
+
+        if ($role->value === UserRole::MANAGER->value) {
+            $managerCategoryId = (int) ($user->manager_category_id ?? 0);
+
+            if ($managerCategoryId === 0) {
+                return response()->json([
+                    'message' => 'Anda tidak memiliki kategori manajer yang valid untuk persetujuan ini.'
+                ], 403);
+            }
+
+            $ticketCategoryId = (int) ($featureRequest->manager_category_id ?? 0);
+
+            if ($ticketCategoryId === 0) {
+                $ticketCategoryId = (int) ($featureRequest->user?->unit?->manager_category_id ?? 0);
+            }
+
+            if ($ticketCategoryId === 0 || $ticketCategoryId !== $managerCategoryId) {
+                return response()->json([
+                    'message' => 'Ticket ini tidak berada dalam penugasan kategori Anda.'
+                ], 403);
+            }
+        }
 
         $stageMap = [
             'pending' => UserRole::MANAGER,
@@ -50,7 +74,7 @@ class ApprovalController extends Controller
 
         if (! $expectedRole) {
             return response()->json([
-                'message' => 'Permintaan ini sudah selesai diproses.'
+                'message' => 'Pengajuan ini sudah selesai diproses.'
             ], 422);
         }
 

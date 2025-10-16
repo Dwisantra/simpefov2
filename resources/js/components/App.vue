@@ -31,6 +31,9 @@
               <li v-if="isAdmin" class="nav-item">
                 <router-link class="nav-link" to="/admin/master">Master Data</router-link>
               </li>
+              <li v-if="isJangmedManager" class="nav-item">
+                <router-link class="nav-link" to="/manager/jangmed/priorities">Prioritas Ticket</router-link>
+              </li>
               <li v-if="canRequest" class="nav-item">
                 <router-link class="nav-link" to="/feature-request/create">Ajukan Form</router-link>
               </li>
@@ -44,6 +47,7 @@
                 >
                   <span class="d-flex flex-column text-start">
                     <span class="fw-semibold">{{ auth.user?.name }}</span>
+                    <small class="text-danger text-capitalize">{{ auth.user?.username }}</small>
                     <small class="text-muted text-capitalize">{{ roleLabel }}</small>
                   </span>
                 </button>
@@ -129,6 +133,7 @@ const {
   roleLabel,
   canRequest,
   isAdmin,
+  isJangmedManager,
   accountMenuRef,
   accountMenuOpen,
   toggleAccountMenu,
@@ -142,5 +147,8 @@ const {
   submitKodeSign,
   logout
 } = useAppShell()
+
+console.log(auth);
+
 </script>
 

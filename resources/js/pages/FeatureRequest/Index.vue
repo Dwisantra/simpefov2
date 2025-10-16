@@ -2,7 +2,7 @@
   <div class="page-wrapper ticket-index py-2">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 section-heading">
       <div class="heading-copy">
-        <h2 class="fw-semibold mb-1">Ticketing Permintaan Form</h2>
+        <h2 class="fw-semibold mb-1">Ticketing Pengajuan Form</h2>
         <p class="text-muted mb-0">Pantau status pengajuan dan proses persetujuan lintas level secara real-time.</p>
       </div>
       <router-link
@@ -13,7 +13,7 @@
         + Ajukan Form Baru
       </router-link>
       <div v-else class="text-muted small fw-semibold">
-        Hanya pemohon yang dapat membuat tiket baru.
+        Hanya pemohon yang dapat membuat ticket baru.
       </div>
     </div>
 
@@ -23,41 +23,22 @@
 
     <div v-if="loading" class="text-center py-5">
       <div class="spinner-border text-primary" role="status"></div>
-      <p class="text-muted mt-3">Memuat daftar tiket...</p>
-    </div>
-
-    <div v-else-if="!hasRequests" class="empty-state text-center py-5">
-      <h4 class="fw-semibold">Belum ada tiket pengajuan</h4>
-      <p class="text-muted mb-4">
-        Mulai ajukan permintaan form untuk mengaktifkan alur persetujuan digital dengan manager dan direktur.
-      </p>
-      <router-link
-        v-if="canCreate"
-        to="/feature-request/create"
-        class="btn btn-outline-primary px-4"
-      >
-        Buat Tiket Pertama
-      </router-link>
-      <p v-else class="text-muted mb-0">
-        Hubungi pemohon untuk mengirimkan tiket pertama.
-      </p>
+      <p class="text-muted mt-3">Memuat daftar ticket...</p>
     </div>
 
     <div v-else>
-      <div class="ticket-filter-bar d-flex flex-wrap align-items-center gap-3">
-        <div class="d-flex align-items-center gap-2">
-          <label class="form-label mb-0 text-muted small fw-semibold" for="ticket-filter-select">
-            Tampilkan
-          </label>
-          <select
-            id="ticket-filter-select"
-            v-model="completionFilter"
-            class="form-select form-select-sm"
+      <div class="workflow-tabs d-flex flex-wrap align-items-center gap-3 mb-4">
+        <div class="stage-switcher d-flex flex-wrap gap-2">
+          <button
+            v-for="option in stageOptions"
+            :key="`stage-${option.value}`"
+            type="button"
+            class="btn"
+            :class="stage === option.value ? 'btn-primary' : 'btn-outline-primary'"
+            @click="setStage(option.value)"
           >
-            <option v-for="option in completionOptions" :key="option.value" :value="option.value">
-              {{ option.label }}
-            </option>
-          </select>
+            {{ option.label }}
+          </button>
         </div>
 
         <div class="ms-auto d-flex align-items-center gap-2 pagination-size-control">
@@ -76,12 +57,23 @@
         </div>
       </div>
 
-      <div v-if="!hasFilteredRequests" class="alert alert-info border-0 shadow-sm">
-        {{ emptyFilteredMessage }}
+      <p class="text-muted small mb-4">{{ stageDescription }}</p>
+
+      <div v-if="!hasStageItems" class="alert alert-info border-0 shadow-sm d-flex flex-column flex-lg-row gap-3 align-items-lg-center">
+        <div class="flex-grow-1">
+          {{ emptyStageMessage }}
+        </div>
+        <router-link
+          v-if="stage === 'submission' && canCreate"
+          to="/feature-request/create"
+          class="btn btn-outline-primary"
+        >
+          Buat Ticket Pertama
+        </router-link>
       </div>
 
       <div v-else class="row g-4 row-cols-1 row-cols-xl-2">
-        <div v-for="item in filteredRequests" :key="item.id" class="col">
+        <div v-for="item in requests" :key="item.id" class="col">
           <div class="card ticket-card border-0 shadow-sm h-100">
             <div class="card-body p-4">
               <div class="ticket-card-layout">
@@ -174,7 +166,7 @@
           {{ displaySummary }}
         </p>
 
-        <nav v-if="hasPagination" aria-label="Navigasi halaman tiket">
+        <nav v-if="hasPagination" aria-label="Navigasi halaman ticket">
           <ul class="pagination pagination-sm mb-0">
             <li class="page-item" :class="{ disabled: pageMeta.current <= 1 }">
               <button
@@ -214,7 +206,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { useFeatureRequestIndex } from '@/ticketing/composables'
 import { ROLE, ROLE_LABELS } from '@/constants/roles'
 
@@ -256,78 +248,36 @@ const {
   pageSummary,
   goToPage,
   nextPage,
-  previousPage
+  previousPage,
+  stage,
+  stageOptions,
+  stageDescription,
+  setStage
 } = useFeatureRequestIndex()
 
-const completionFilter = ref('active')
-const completionOptions = [
-  { value: 'all', label: 'Semua tiket' },
-  { value: 'active', label: 'Sedang diproses' },
-  { value: 'completed', label: 'Sudah selesai' }
-]
-const completedStatuses = ['approved_b', 'done']
+const hasStageItems = computed(() => (requests.value ?? []).length > 0)
 
-const hasRequests = computed(() => {
-  if ((requests.value ?? []).length > 0) {
-    return true
+const emptyStageMessage = computed(() => {
+  if (stage.value === 'development') {
+    return 'Belum ada ticket yang memasuki tahap pengerjaan tim IT.'
   }
 
-  return (pageMeta.value?.total ?? 0) > 0
-})
-
-const filteredRequests = computed(() => {
-  const list = requests.value ?? []
-
-  if (completionFilter.value === 'active') {
-    return list.filter((item) => !completedStatuses.includes(item.status))
-  }
-
-  if (completionFilter.value === 'completed') {
-    return list.filter((item) => completedStatuses.includes(item.status))
-  }
-
-  return list
-})
-
-const hasFilteredRequests = computed(() => filteredRequests.value.length > 0)
-
-const emptyFilteredMessage = computed(() => {
-  if (completionFilter.value === 'active') {
-    return 'Tidak ada tiket aktif saat ini.'
-  }
-
-  if (completionFilter.value === 'completed') {
-    return 'Belum ada tiket yang ditandai selesai.'
-  }
-
-  return 'Belum ada tiket pengajuan.'
+  return 'Belum ada ticket yang menunggu persetujuan.'
 })
 
 const roleNotice = computed(() => {
   if (isAdmin.value) {
-    return 'Sebagai admin Anda dapat memantau seluruh tiket dan menambahkan komentar pada setiap pengajuan.'
+    return 'Sebagai admin Anda dapat memantau seluruh ticket dan menambahkan komentar pada setiap pengajuan.'
   }
 
   if (!canCreate.value) {
-    return 'Anda memiliki akses pantau dan persetujuan. Untuk membuat tiket baru silakan minta bantuan pemohon.'
+    return 'Anda memiliki akses pantau dan persetujuan. Untuk membuat ticket baru silakan minta bantuan pemohon.'
   }
 
   return ''
 })
 
-const displaySummary = computed(() => {
-  if (completionFilter.value === 'all') {
-    return pageSummary.value
-  }
-
-  const count = filteredRequests.value.length
-
-  if (!count) {
-    return 'Tidak ada tiket yang ditampilkan.'
-  }
-
-  return `Menampilkan 1-${count} dari ${count} tiket`
-})
+const displaySummary = computed(() => pageSummary.value)
 
 const stageState = (item, stage, index) => {
   const completedSteps = progressSteps(item)

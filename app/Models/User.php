@@ -21,10 +21,12 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'username',
         'email',
         'password',
         'initial_password',
         'level',
+        'manager_category_id',
         'kode_sign',
         'phone',
         'instansi',
@@ -56,10 +58,17 @@ class User extends Authenticatable
             'password' => 'hashed',
             'verified_at' => 'datetime',
             'level' => 'integer',
+            'manager_category_id' => 'integer',
         ];
     }
 
-    protected $appends = ['role', 'role_label', 'has_kode_sign', 'is_verified'];
+    protected $appends = [
+        'role',
+        'role_label',
+        'has_kode_sign',
+        'is_verified',
+        'manager_category_label',
+    ];
 
     public function getRoleAttribute(): ?int
     {
@@ -81,6 +90,13 @@ class User extends Authenticatable
     public function getIsVerifiedAttribute(): bool
     {
         return ! is_null($this->verified_at);
+    }
+
+    public function getManagerCategoryLabelAttribute(): ?string
+    {
+        $category = \App\Enums\ManagerCategory::tryFromMixed($this->manager_category_id);
+
+        return $category?->label();
     }
 
     public function unit()

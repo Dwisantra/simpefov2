@@ -5,6 +5,7 @@ import FeatureRequestIndex from '@/pages/FeatureRequest/Index.vue'
 import FeatureRequestCreate from '@/pages/FeatureRequest/Create.vue'
 import FeatureRequestDetail from '@/pages/FeatureRequest/Detail.vue'
 import AdminMaster from '@/pages/Admin/Master.vue'
+import JangmedPriorities from '@/pages/Manager/JangmedPriorities.vue'
 import { useAuthStore } from '@/stores/auth'
 import { ROLE } from '@/constants/roles'
 
@@ -36,6 +37,12 @@ const routes = [
         name: 'admin.master',
         component: AdminMaster,
         meta: { requiresAuth: true, requiresRole: ROLE.ADMIN }
+    },
+    {
+        path: '/manager/jangmed/priorities',
+        name: 'manager.jangmed.priorities',
+        component: JangmedPriorities,
+        meta: { requiresAuth: true, requiresRole: ROLE.MANAGER, requiresJangmedManager: true }
     }
 ]
 
@@ -58,6 +65,13 @@ router.beforeEach(async (to, from, next) => {
 
     if (to.meta.requiresRole && auth.user?.level !== to.meta.requiresRole) {
         return next('/feature-request')
+    }
+
+    if (to.meta.requiresJangmedManager) {
+        const categoryId = Number(auth.user?.manager_category_id)
+        if (categoryId !== 3) {
+            return next('/feature-request')
+        }
     }
 
     if (to.meta.requiresGuest && auth.user) {

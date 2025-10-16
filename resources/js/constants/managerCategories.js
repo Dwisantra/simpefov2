@@ -1,0 +1,20 @@
+export const MANAGER_CATEGORY = Object.freeze({
+  YANMUM: 1,
+  YANMED: 2,
+  JANGMED: 3
+})
+
+export const MANAGER_CATEGORY_LABELS = Object.freeze({
+  [MANAGER_CATEGORY.YANMUM]: 'Manager Yanmum',
+  [MANAGER_CATEGORY.YANMED]: 'Manager Yanmed',
+  [MANAGER_CATEGORY.JANGMED]: 'Manager Jangmed'
+})
+
+export const MANAGER_CATEGORY_OPTIONS = Object.freeze([
+  { value: MANAGER_CATEGORY.YANMUM, label: MANAGER_CATEGORY_LABELS[MANAGER_CATEGORY.YANMUM] },
+  { value: MANAGER_CATEGORY.YANMED, label: MANAGER_CATEGORY_LABELS[MANAGER_CATEGORY.YANMED] },
+  { value: MANAGER_CATEGORY.JANGMED, label: MANAGER_CATEGORY_LABELS[MANAGER_CATEGORY.JANGMED] }
+])
+
+export const resolveManagerCategoryLabel = (value) =>
+  MANAGER_CATEGORY_LABELS[value] ?? ''

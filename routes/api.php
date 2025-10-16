@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\FeatureRequestCommentController;
 use App\Http\Controllers\Admin\FeatureRequestGitlabController;
+use App\Http\Controllers\Manager\JangmedPriorityController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserVerificationController;
 use App\Http\Controllers\GitlabWebhookController;
@@ -52,4 +53,7 @@ Route::middleware(['auth:sanctum', 'sanctum.timeout'])->group(function () {
         '/feature-requests/{featureRequest}/comments/{comment}/attachment',
         [FeatureRequestCommentController::class, 'downloadAttachment']
     )->name('api.feature-requests.comments.attachment');
+
+    Route::get('/manager/jangmed/priorities', [JangmedPriorityController::class, 'index']);
+    Route::patch('/manager/jangmed/priorities/{featureRequest}', [JangmedPriorityController::class, 'update']);
 });

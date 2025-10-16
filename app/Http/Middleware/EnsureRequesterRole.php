@@ -17,7 +17,7 @@ class EnsureRequesterRole
 
         if (UserRole::tryFromMixed($user->level ?? $user->role)?->value !== UserRole::USER->value) {
             return response()->json([
-                'message' => 'Hanya pemohon yang dapat mengajukan tiket baru.'
+                'message' => 'Hanya pemohon yang dapat mengajukan ticket baru.'
             ], 403);
         }
 

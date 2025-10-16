@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -16,6 +17,7 @@ class AuthController extends Controller
     {
         $data = $request->validate([
             'name' => 'required|string|max:255',
+            'username' => 'required|string|alpha_dash|max:50|unique:users,username',
             'email' => 'required|email|unique:users,email',
             'password' => ['required', 'string', 'min:8', 'regex:/^(?=.*[A-Za-z])(?=.*\\d).+$/', 'confirmed'],
             'password_confirmation' => 'required|string|min:8',
@@ -42,6 +44,7 @@ class AuthController extends Controller
 
         $user = User::create([
             'name' => $data['name'],
+            'username' => Str::lower(trim($data['username'])),
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
             'initial_password' => Crypt::encryptString($data['password']),
@@ -60,15 +63,17 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'email' => 'required|email',
+            'username' => 'required|string',
             'password' => 'required'
         ]);
 
-        $user = User::where('email', $request->email)->first();
+        $username = Str::lower(trim((string) $request->username));
+
+        $user = User::where('username', $username)->first();
 
         if (! $user || ! Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
+                'username' => ['The provided credentials are incorrect.'],
             ]);
         }
 
