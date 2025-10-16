@@ -8,34 +8,52 @@
         <button
           class="navbar-toggler"
           type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#mainNav"
+          :class="{ collapsed: !mainNavOpen }"
+          @click="toggleMainNav"
           aria-controls="mainNav"
-          aria-expanded="false"
+          :aria-expanded="mainNavOpen ? 'true' : 'false'"
           aria-label="Toggle navigation"
         >
           <span class="navbar-toggler-icon"></span>
         </button>
-        <div class="collapse navbar-collapse justify-content-end" id="mainNav">
+        <div
+          ref="mainNavRef"
+          class="collapse navbar-collapse justify-content-end"
+          id="mainNav"
+        >
           <ul class="navbar-nav align-items-lg-center gap-lg-3">
             <li v-if="!isLoggedIn" class="nav-item">
-              <router-link class="nav-link" to="/login">Login</router-link>
+              <router-link class="nav-link" to="/login" @click="handleNavLinkClick">Login</router-link>
             </li>
             <li v-if="!isLoggedIn" class="nav-item">
-              <router-link class="nav-link" to="/register">Register</router-link>
+              <router-link class="nav-link" to="/register" @click="handleNavLinkClick">
+                Register
+              </router-link>
             </li>
             <template v-else>
               <li class="nav-item">
-                <router-link class="nav-link" to="/feature-request">Daftar Ticket</router-link>
+                <router-link class="nav-link" to="/feature-request" @click="handleNavLinkClick">
+                  Daftar Ticket
+                </router-link>
               </li>
               <li v-if="isAdmin" class="nav-item">
-                <router-link class="nav-link" to="/admin/master">Master Data</router-link>
+                <router-link class="nav-link" to="/admin/master" @click="handleNavLinkClick">
+                  Master Data
+                </router-link>
               </li>
               <li v-if="isJangmedManager" class="nav-item">
-                <router-link class="nav-link" to="/manager/jangmed/priorities">Prioritas Ticket</router-link>
+                <router-link
+                  class="nav-link"
+                  to="/manager/jangmed/priorities"
+                  @click="handleNavLinkClick"
+                >
+                  Prioritas Ticket
+                </router-link>
               </li>
               <li v-if="canRequest" class="nav-item">
-                <router-link class="nav-link" to="/feature-request/create">Ajukan Form</router-link>
+                <router-link class="nav-link" to="/feature-request/create" @click="handleNavLinkClick">
+                  Ajukan Form
+                </router-link>
               </li>
               <li class="nav-item dropdown" ref="accountMenuRef" :class="{ show: accountMenuOpen }">
                 <button
@@ -57,7 +75,7 @@
                   </li>
                   <li><hr class="dropdown-divider" /></li>
                   <li>
-                    <button class="dropdown-item text-danger" @click="logout">Keluar</button>
+                    <button class="dropdown-item text-danger" @click="handleLogout">Keluar</button>
                   </li>
                 </ul>
               </li>
@@ -125,6 +143,8 @@
 </template>
 
 <script setup>
+import { Collapse } from 'bootstrap'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useAppShell } from '@/ticketing/composables'
 
 const {
@@ -148,7 +168,68 @@ const {
   logout
 } = useAppShell()
 
-console.log(auth);
+const mainNavRef = ref(null)
+const mainNavOpen = ref(false)
+const mainNavCollapse = ref(null)
+
+const toggleMainNav = () => {
+  if (!mainNavCollapse.value) {
+    return
+  }
+
+  mainNavCollapse.value.toggle()
+}
+
+const closeMainNav = () => {
+  if (!mainNavCollapse.value || !mainNavOpen.value) {
+    return
+  }
+
+  mainNavCollapse.value.hide()
+}
+
+const handleNavLinkClick = () => {
+  closeMainNav()
+}
+
+const handleLogout = async () => {
+  closeMainNav()
+  await logout()
+}
+
+const handleMainNavShown = () => {
+  mainNavOpen.value = true
+}
+
+const handleMainNavHidden = () => {
+  mainNavOpen.value = false
+}
+
+onMounted(() => {
+  if (!mainNavRef.value) {
+    return
+  }
+
+  mainNavCollapse.value = new Collapse(mainNavRef.value, {
+    toggle: false
+  })
+
+  mainNavRef.value.addEventListener('shown.bs.collapse', handleMainNavShown)
+  mainNavRef.value.addEventListener('hidden.bs.collapse', handleMainNavHidden)
+})
+
+onBeforeUnmount(() => {
+  if (!mainNavRef.value) {
+    return
+  }
+
+  mainNavRef.value.removeEventListener('shown.bs.collapse', handleMainNavShown)
+  mainNavRef.value.removeEventListener('hidden.bs.collapse', handleMainNavHidden)
+  if (mainNavCollapse.value) {
+    mainNavCollapse.value.hide()
+    mainNavCollapse.value.dispose()
+  }
+})
 
 </script>
 
