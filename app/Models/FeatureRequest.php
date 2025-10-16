@@ -56,6 +56,7 @@ class FeatureRequest extends Model
         'workflow_stage',
         'workflow_stage_label',
         'requester_unit_name',
+        'requires_director_a_approval',
     ];
 
     protected $casts = [
@@ -93,9 +94,13 @@ class FeatureRequest extends Model
 
     public function getStatusLabelAttribute(): string
     {
+        $requiresDirectorA = $this->requires_director_a_approval;
+
         return match ($this->status) {
             'pending' => 'Menunggu ACC Manager',
-            'approved_manager' => 'Menunggu Direktur RS Raffa Majenang',
+            'approved_manager' => $requiresDirectorA
+                ? 'Menunggu Direktur RS Raffa Majenang'
+                : 'Menunggu Direktur RS Wiradadi Husada',
             'approved_a' => 'Menunggu Direktur RS Wiradadi Husada',
             'approved_b', 'done' => 'Selesai',
             default => ucfirst($this->status ?? 'Tidak diketahui'),
@@ -104,13 +109,23 @@ class FeatureRequest extends Model
 
     public function getStatusProgressAttribute(): int
     {
-        $map = [
-            'pending' => 1,
-            'approved_manager' => 2,
-            'approved_a' => 3,
-            'approved_b' => 4,
-            'done' => 4,
-        ];
+        $requiresDirectorA = $this->requires_director_a_approval;
+
+        $map = $requiresDirectorA
+            ? [
+                'pending' => 1,
+                'approved_manager' => 2,
+                'approved_a' => 3,
+                'approved_b' => 4,
+                'done' => 4,
+            ]
+            : [
+                'pending' => 1,
+                'approved_manager' => 2,
+                'approved_a' => 2,
+                'approved_b' => 3,
+                'done' => 3,
+            ];
 
         return $map[$this->status] ?? 0;
     }
@@ -197,5 +212,16 @@ class FeatureRequest extends Model
     public function getRequesterUnitNameAttribute(): ?string
     {
         return $this->requesterUnit?->name ?? $this->user?->unit?->name;
+    }
+
+    public function getRequiresDirectorAApprovalAttribute(): bool
+    {
+        $instansi = $this->requester_instansi ?? $this->user?->instansi;
+
+        if ($instansi === 'wiradadi' && config('feature-requests.skip_raffa_director_for_wiradadi')) {
+            return false;
+        }
+
+        return true;
     }
 }

@@ -36,6 +36,15 @@
                   Daftar Ticket
                 </router-link>
               </li>
+              <li class="nav-item">
+                <router-link
+                  class="nav-link"
+                  to="/feature-request/monitoring"
+                  @click="handleNavLinkClick"
+                >
+                  Monitoring Ticket
+                </router-link>
+              </li>
               <li v-if="isAdmin" class="nav-item">
                 <router-link class="nav-link" to="/admin/master" @click="handleNavLinkClick">
                   Master Data

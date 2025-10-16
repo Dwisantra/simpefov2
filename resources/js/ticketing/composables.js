@@ -16,9 +16,13 @@ const statusLabels = {
   done: 'Selesai'
 }
 
-const resolveStatusLabel = (status, _instansi = null) => {
+const resolveStatusLabel = (status, _instansi = null, requiresDirectorA = true) => {
   if (!status) {
     return '-'
+  }
+
+  if (status === 'approved_manager' && !requiresDirectorA) {
+    return 'Menunggu Direktur RS Wiradadi Husada'
   }
 
   return statusLabels[status] ?? status
@@ -43,6 +47,138 @@ const resolveDevelopmentStatusBadgeClass = (statusId) =>
 
 const resolveDevelopmentStatusLabel = (statusId) =>
   developmentStatusRegistry[statusId]?.label ?? ''
+
+const instansiNameMap = Object.freeze({
+  wiradadi: 'RS Wiradadi Husada',
+  raffa: 'RS Raffa Majenang'
+})
+
+const formatInstansiLabel = (value) => instansiNameMap[value] ?? value ?? '-'
+
+const baseApprovalSteps = 4
+
+const requiresDirectorAApproval = (item) => {
+  if (!item || typeof item !== 'object') {
+    return true
+  }
+
+  return item.requires_director_a_approval !== false
+}
+
+const approvalProgressFromStatus = (item) => {
+  const status = typeof item === 'object' ? item?.status : item
+  const requiresDirectorA = requiresDirectorAApproval(item)
+
+  const map = requiresDirectorA
+    ? {
+        pending: 1,
+        approved_manager: 2,
+        approved_a: 3,
+        approved_b: 4,
+        done: 4
+      }
+    : {
+        pending: 1,
+        approved_manager: 2,
+        approved_a: 2,
+        approved_b: 3,
+        done: 3
+      }
+
+  return map[status] ?? 0
+}
+
+const totalApprovalSteps = (item = null) =>
+  requiresDirectorAApproval(item) ? baseApprovalSteps : baseApprovalSteps - 1
+
+const approvalProgressSteps = (item) => {
+  const count = totalApprovalSteps(item)
+  const rawProgress = item?.status_progress
+  const parsedProgress =
+    rawProgress === null || rawProgress === undefined || rawProgress === ''
+      ? NaN
+      : Number(rawProgress)
+  const baseProgress = Number.isFinite(parsedProgress)
+    ? parsedProgress
+    : approvalProgressFromStatus(item)
+  const numeric = Number.isFinite(baseProgress) ? baseProgress : 0
+  return Math.max(0, Math.min(count, numeric))
+}
+
+const approvalProgressPercentage = (item) => {
+  const stepsCount = totalApprovalSteps(item)
+
+  if (stepsCount <= 1) {
+    return 100
+  }
+
+  const value = approvalProgressSteps(item)
+
+  if (value <= 1) {
+    return 5
+  }
+
+  return Math.min(100, Math.round(((value - 1) / (stepsCount - 1)) * 100))
+}
+
+const statusBadgeClassFor = (status) => {
+  switch (status) {
+    case 'approved_b':
+    case 'done':
+      return 'bg-success-subtle text-success'
+    case 'approved_a':
+      return 'bg-info-subtle text-info'
+    case 'approved_manager':
+      return 'bg-warning-subtle text-warning'
+    default:
+      return 'bg-secondary-subtle text-secondary'
+  }
+}
+
+const priorityBadgeClassFor = (priority) => resolvePriorityBadgeClass(priority)
+
+const describeTicketStatus = (value) => {
+  if (!value && value !== 0) {
+    return '-'
+  }
+
+  if (typeof value === 'string') {
+    return resolveStatusLabel(value, null, true)
+  }
+
+  if (typeof value === 'object') {
+    const requiresDirectorA = requiresDirectorAApproval(value)
+    return resolveStatusLabel(value.status, value.requester_instansi, requiresDirectorA)
+  }
+
+  return '-'
+}
+
+const developmentStepsTotal = developmentStatusChoices.length || 4
+
+const normalizeDevelopmentStep = (item) => {
+  const raw = item?.development_status
+  const parsed = Number(raw)
+
+  if (Number.isFinite(parsed) && parsed >= 1) {
+    return Math.max(1, Math.min(developmentStepsTotal, parsed))
+  }
+
+  if (item?.status === 'done') {
+    return developmentStepsTotal
+  }
+
+  return 1
+}
+
+const developmentProgressPercentageFor = (item) => {
+  if (developmentStepsTotal <= 0) {
+    return 0
+  }
+
+  const step = normalizeDevelopmentStep(item)
+  return Math.round((step / developmentStepsTotal) * 100)
+}
 
 const PRIORITY_OPTIONS = Object.freeze([
   { value: 'biasa', label: 'Prioritas Biasa' },
@@ -438,93 +574,19 @@ export function useFeatureRequestIndex() {
 
   const stageDescription = computed(() => stageCopy[stage.value] ?? '')
 
-  const statusLabel = (value) => {
-    if (!value && value !== 0) {
-      return '-'
-    }
+  const statusLabel = (value) => describeTicketStatus(value)
 
-    if (typeof value === 'string') {
-      return resolveStatusLabel(value)
-    }
+  const statusBadgeClass = (status) => statusBadgeClassFor(status)
 
-    if (typeof value === 'object') {
-      return resolveStatusLabel(value.status, value.requester_instansi)
-    }
+  const priorityBadgeClass = (priority) => priorityBadgeClassFor(priority)
 
-    return '-'
-  }
+  const totalSteps = (item = null) => totalApprovalSteps(item)
 
-  const statusBadgeClass = (status) => {
-    switch (status) {
-      case 'approved_b':
-      case 'done':
-        return 'bg-success-subtle text-success'
-      case 'approved_a':
-        return 'bg-info-subtle text-info'
-      case 'approved_manager':
-        return 'bg-warning-subtle text-warning'
-      default:
-        return 'bg-secondary-subtle text-secondary'
-    }
-  }
+  const instansiLabel = (value) => formatInstansiLabel(value)
 
-  const priorityBadgeClass = (priority) => resolvePriorityBadgeClass(priority)
+  const progressSteps = (item) => approvalProgressSteps(item)
 
-  const baseTotalSteps = 4
-
-  const totalSteps = () => baseTotalSteps
-
-  const instansiLabel = (value) => {
-    const map = {
-      wiradadi: 'RS Wiradadi Husada',
-      raffa: 'RS Raffa Majenang',
-    }
-
-    return map[value] ?? value ?? '-'
-  }
-
-  const progressFromStatus = (item) => {
-    const status = typeof item === 'object' ? item?.status : item
-    const defaultMap = {
-      pending: 1,
-      approved_manager: 2,
-      approved_a: 3,
-      approved_b: 4,
-      done: 4
-    }
-
-    return defaultMap[status] ?? 0
-  }
-
-  const progressSteps = (item) => {
-    const count = totalSteps(item)
-    const rawProgress = item?.status_progress
-    const parsedProgress =
-      rawProgress === null || rawProgress === undefined || rawProgress === ''
-        ? NaN
-        : Number(rawProgress)
-    const baseProgress = Number.isFinite(parsedProgress)
-      ? parsedProgress
-      : progressFromStatus(item)
-    const numeric = Number.isFinite(baseProgress) ? baseProgress : 0
-    return Math.max(0, Math.min(count, numeric))
-  }
-
-  const progressPercentage = (item) => {
-    const stepsCount = totalSteps(item)
-
-    if (stepsCount <= 1) {
-      return 100
-    }
-
-    const value = progressSteps(item)
-
-    if (value <= 1) {
-      return 5
-    }
-
-    return Math.min(100, Math.round(((value - 1) / (stepsCount - 1)) * 100))
-  }
+  const progressPercentage = (item) => approvalProgressPercentage(item)
 
   const pageMeta = computed(() => ({
     current: pagination.value.current_page ?? 1,
@@ -654,6 +716,192 @@ export function useFeatureRequestIndex() {
     instansiLabel,
     canCreate,
     isAdmin
+  }
+}
+
+export function useTicketMonitoring() {
+  const loading = ref(false)
+  const perPage = ref(10)
+  const activeTab = ref('pengerjaan')
+  const pagination = ref({
+    data: [],
+    current_page: 1,
+    last_page: 1,
+    per_page: perPage.value,
+    total: 0,
+    from: 0,
+    to: 0
+  })
+
+  const tickets = computed(() => pagination.value.data ?? [])
+
+  const tabOptions = [
+    { value: 'pengerjaan', label: 'Sedang Dikerjakan' },
+    { value: 'selesai', label: 'Selesai' }
+  ]
+
+  const tabCopy = {
+    pengerjaan:
+      'Pantau progres analisis, pengerjaan, testing, hingga siap rilis untuk ticket yang sedang ditangani tim IT.',
+    selesai: 'Lihat ticket yang sudah selesai dikerjakan dan siap digunakan unit terkait.'
+  }
+
+  const emptyCopy = {
+    pengerjaan: 'Belum ada ticket yang sedang dikerjakan oleh tim IT saat ini.',
+    selesai: 'Belum ada ticket selesai pada periode ini.'
+  }
+
+  const tabDescription = computed(() => tabCopy[activeTab.value] ?? '')
+  const emptyMessage = computed(() => emptyCopy[activeTab.value] ?? 'Belum ada ticket.')
+
+  const loadTickets = async (page = 1) => {
+    loading.value = true
+    try {
+      const { data } = await axios.get('/feature-requests/monitoring', {
+        params: {
+          page,
+          per_page: perPage.value,
+          tab: activeTab.value
+        }
+      })
+
+      pagination.value = {
+        ...data,
+        data: data?.data ?? []
+      }
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const perPageOptions = [5, 10, 20, 50]
+
+  const pageMeta = computed(() => ({
+    current: pagination.value.current_page ?? 1,
+    last: pagination.value.last_page ?? 1,
+    perPage: pagination.value.per_page ?? perPage.value,
+    from: pagination.value.from ?? 0,
+    to: pagination.value.to ?? 0,
+    total: pagination.value.total ?? tickets.value.length
+  }))
+
+  const hasPagination = computed(() => pageMeta.value.last > 1)
+
+  const pageNumbers = computed(() => {
+    const total = pageMeta.value.last
+    const current = pageMeta.value.current
+    const delta = 2
+
+    const start = Math.max(1, current - delta)
+    const end = Math.min(total, current + delta)
+
+    return Array.from({ length: Math.max(0, end - start + 1) }, (_, index) => start + index)
+  })
+
+  const pageSummary = computed(() => {
+    if (!pageMeta.value.total) {
+      return 'Tidak ada ticket yang ditampilkan.'
+    }
+
+    return `Menampilkan ${pageMeta.value.from}-${pageMeta.value.to} dari ${pageMeta.value.total} ticket`
+  })
+
+  const goToPage = (page) => {
+    if (page < 1 || page > pageMeta.value.last || page === pageMeta.value.current) {
+      return
+    }
+
+    loadTickets(page)
+  }
+
+  const nextPage = () => {
+    goToPage(pageMeta.value.current + 1)
+  }
+
+  const previousPage = () => {
+    goToPage(pageMeta.value.current - 1)
+  }
+
+  const setTab = (value) => {
+    if (activeTab.value === value) {
+      return
+    }
+
+    const option = tabOptions.find((item) => item.value === value)
+    if (option) {
+      activeTab.value = option.value
+    }
+  }
+
+  onMounted(() => {
+    loadTickets(pageMeta.value.current)
+  })
+
+  watch(
+    perPage,
+    (value, oldValue) => {
+      if (value !== oldValue) {
+        loadTickets(1)
+      }
+    }
+  )
+
+  watch(activeTab, () => {
+    loadTickets(1)
+  })
+
+  const statusLabel = (value) => describeTicketStatus(value)
+  const statusBadgeClass = (status) => statusBadgeClassFor(status)
+  const priorityBadgeClass = (priority) => priorityBadgeClassFor(priority)
+  const instansiLabel = (value) => formatInstansiLabel(value)
+  const developmentStatusBadgeClass = (statusId) => resolveDevelopmentStatusBadgeClass(statusId)
+  const developmentStatusLabel = (item) => {
+    if (item?.development_status_label) {
+      return item.development_status_label
+    }
+
+    if (item?.development_status) {
+      const label = resolveDevelopmentStatusLabel(Number(item.development_status))
+      if (label) {
+        return label
+      }
+    }
+
+    if (item?.status === 'done') {
+      return 'Selesai'
+    }
+
+    return 'Belum Ditentukan'
+  }
+
+  const developmentProgress = (item) => developmentProgressPercentageFor(item)
+
+  return {
+    tickets,
+    loading,
+    perPage,
+    perPageOptions,
+    activeTab,
+    tabOptions,
+    setTab,
+    tabDescription,
+    emptyMessage,
+    statusLabel,
+    statusBadgeClass,
+    priorityBadgeClass,
+    developmentStatusBadgeClass,
+    developmentStatusLabel,
+    developmentProgress,
+    pageMeta,
+    pageNumbers,
+    hasPagination,
+    pageSummary,
+    goToPage,
+    nextPage,
+    previousPage,
+    loadTickets,
+    formatDate: formatDateTime,
+    instansiLabel
   }
 }
 
@@ -955,7 +1203,11 @@ export function useFeatureRequestDetail() {
   })
 
   const statusLabel = computed(() =>
-    resolveStatusLabel(feature.value?.status, feature.value?.requester_instansi)
+    resolveStatusLabel(
+      feature.value?.status,
+      feature.value?.requester_instansi,
+      feature.value?.requires_director_a_approval !== false
+    )
   )
 
   const statusClass = computed(() => {
@@ -994,6 +1246,8 @@ export function useFeatureRequestDetail() {
   )
 
   const steps = computed(() => {
+    const requiresDirectorA = feature.value?.requires_director_a_approval !== false
+
     const definitions = [
       {
         role: ROLE.USER,
@@ -1017,9 +1271,13 @@ export function useFeatureRequestDetail() {
       }
     ]
 
+    const filteredDefinitions = requiresDirectorA
+      ? definitions
+      : definitions.filter((definition) => definition.role !== ROLE.DIRECTOR_A)
+
     let previousCompleted = true
 
-    return definitions.map((definition) => {
+    return filteredDefinitions.map((definition) => {
       let approval = approvalsByRole.value[definition.role]
       let completed = !!approval
 
@@ -1100,12 +1358,19 @@ export function useFeatureRequestDetail() {
 
   const currentStageRole = computed(() => {
     const status = feature.value?.status
+    const requiresDirectorA = feature.value?.requires_director_a_approval !== false
 
-    const map = {
-      pending: ROLE.MANAGER,
-      approved_manager: ROLE.DIRECTOR_A,
-      approved_a: ROLE.DIRECTOR_B
-    }
+    const map = requiresDirectorA
+      ? {
+          pending: ROLE.MANAGER,
+          approved_manager: ROLE.DIRECTOR_A,
+          approved_a: ROLE.DIRECTOR_B
+        }
+      : {
+          pending: ROLE.MANAGER,
+          approved_manager: ROLE.DIRECTOR_B,
+          approved_a: ROLE.DIRECTOR_B
+        }
 
     return map[status] ?? null
   })
@@ -1783,6 +2048,23 @@ export function useJangmedPriorities() {
     { value: 'completed', label: 'Selesai' }
   ])
 
+  const isPriorityLocked = (item) => {
+    if (!item) {
+      return false
+    }
+
+    if (item.status === 'done') {
+      return true
+    }
+
+    const developmentStatus = Number(item.development_status)
+    return (
+      item.status === 'approved_b' &&
+      Number.isFinite(developmentStatus) &&
+      developmentStatus >= 4
+    )
+  }
+
   const setMessage = (type, value) => {
     messageType.value = type
     message.value = value
@@ -1875,6 +2157,11 @@ export function useJangmedPriorities() {
   }
 
   const updatePriority = async (item) => {
+    if (isPriorityLocked(item)) {
+      setMessage('warning', 'Prioritas tidak dapat diubah karena ticket sudah selesai.')
+      return
+    }
+
     const selectedPriority = localPriorities[item.id] ?? item.priority ?? 'biasa'
     setRowSaving(item.id, true)
     setMessage('', '')
@@ -1926,6 +2213,7 @@ export function useJangmedPriorities() {
     scopeOptions,
     localPriorities,
     rowSaving,
+    isPriorityLocked,
     loadItems,
     setScope,
     updatePriority,

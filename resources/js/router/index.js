@@ -4,6 +4,7 @@ import Register from '@/pages/Auth/Register.vue'
 import FeatureRequestIndex from '@/pages/FeatureRequest/Index.vue'
 import FeatureRequestCreate from '@/pages/FeatureRequest/Create.vue'
 import FeatureRequestDetail from '@/pages/FeatureRequest/Detail.vue'
+import FeatureRequestMonitoring from '@/pages/FeatureRequest/Monitoring.vue'
 import AdminMaster from '@/pages/Admin/Master.vue'
 import JangmedPriorities from '@/pages/Manager/JangmedPriorities.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -18,6 +19,12 @@ const routes = [
         path: '/feature-request',
         name: 'feature-request.index',
         component: FeatureRequestIndex,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/feature-request/monitoring',
+        name: 'feature-request.monitoring',
+        component: FeatureRequestMonitoring,
         meta: { requiresAuth: true }
     },
     {

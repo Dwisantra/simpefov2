@@ -67,9 +67,10 @@ class JangmedPriorityTest extends TestCase
         $requester = $this->createRequester();
         $otherRequester = $this->createRequester(ManagerCategory::YANMUM, 'raffa');
 
-        $completedA = $this->createFeature($requester, ['status' => 'approved_b']);
-        $otherApproved = $this->createFeature($otherRequester, ['status' => 'approved_b']);
-        $completedB = $this->createFeature($requester, ['status' => 'done']);
+        $activeA = $this->createFeature($requester, ['status' => 'approved_b', 'development_status' => 2]);
+        $activeB = $this->createFeature($otherRequester, ['status' => 'approved_b', 'development_status' => 3]);
+        $readyRelease = $this->createFeature($requester, ['status' => 'approved_b', 'development_status' => 4]);
+        $completed = $this->createFeature($requester, ['status' => 'done']);
         $this->createFeature($requester, ['status' => 'pending']);
 
         $response = $this->getJson('/api/manager/jangmed/priorities');
@@ -84,9 +85,10 @@ class JangmedPriorityTest extends TestCase
 
         $ids = collect($response->json('data'))->pluck('id');
 
-        $this->assertTrue($ids->contains($completedA->id));
-        $this->assertTrue($ids->contains($otherApproved->id));
-        $this->assertFalse($ids->contains($completedB->id));
+        $this->assertTrue($ids->contains($activeA->id));
+        $this->assertTrue($ids->contains($activeB->id));
+        $this->assertFalse($ids->contains($readyRelease->id));
+        $this->assertFalse($ids->contains($completed->id));
         $this->assertCount(2, $response->json('data'));
     }
 
@@ -96,7 +98,8 @@ class JangmedPriorityTest extends TestCase
         $requester = $this->createRequester();
         $otherRequester = $this->createRequester(ManagerCategory::YANMED, 'wiradadi');
 
-        $this->createFeature($requester, ['status' => 'approved_b']);
+        $this->createFeature($requester, ['status' => 'approved_b', 'development_status' => 1]);
+        $readyRelease = $this->createFeature($requester, ['status' => 'approved_b', 'development_status' => 4]);
         $done = $this->createFeature($requester, ['status' => 'done']);
         $otherDone = $this->createFeature($otherRequester, ['status' => 'done']);
 
@@ -106,9 +109,10 @@ class JangmedPriorityTest extends TestCase
 
         $ids = collect($response->json('data'))->pluck('id');
 
+        $this->assertTrue($ids->contains($readyRelease->id));
         $this->assertTrue($ids->contains($done->id));
         $this->assertTrue($ids->contains($otherDone->id));
-        $this->assertCount(2, $ids);
+        $this->assertCount(3, $ids);
     }
 
     public function test_jangmed_manager_sees_requests_from_all_categories(): void
@@ -156,12 +160,12 @@ class JangmedPriorityTest extends TestCase
         $response->assertForbidden();
     }
 
-    public function test_jangmed_manager_can_update_priority_for_completed_request(): void
+    public function test_jangmed_manager_can_update_priority_for_active_request(): void
     {
         $manager = $this->actingAsJangmedManager();
         $requester = $this->createRequester();
 
-        $feature = $this->createFeature($requester, ['status' => 'done']);
+        $feature = $this->createFeature($requester, ['status' => 'approved_b', 'development_status' => 2]);
 
         $response = $this->patchJson("/api/manager/jangmed/priorities/{$feature->id}", [
             'priority' => 'cito',
@@ -186,6 +190,42 @@ class JangmedPriorityTest extends TestCase
         ]);
 
         $response->assertStatus(422);
+        $this->assertSame('biasa', $feature->fresh()->priority);
+    }
+
+    public function test_cannot_update_priority_when_request_already_done(): void
+    {
+        $this->actingAsJangmedManager();
+        $requester = $this->createRequester();
+
+        $feature = $this->createFeature($requester, ['status' => 'done']);
+
+        $response = $this->patchJson("/api/manager/jangmed/priorities/{$feature->id}", [
+            'priority' => 'sedang',
+        ]);
+
+        $response->assertStatus(422)->assertJson([
+            'message' => 'Prioritas ticket yang sudah selesai tidak dapat diubah.',
+        ]);
+
+        $this->assertSame('biasa', $feature->fresh()->priority);
+    }
+
+    public function test_cannot_update_priority_when_request_ready_release(): void
+    {
+        $this->actingAsJangmedManager();
+        $requester = $this->createRequester();
+
+        $feature = $this->createFeature($requester, ['status' => 'approved_b', 'development_status' => 4]);
+
+        $response = $this->patchJson("/api/manager/jangmed/priorities/{$feature->id}", [
+            'priority' => 'sedang',
+        ]);
+
+        $response->assertStatus(422)->assertJson([
+            'message' => 'Prioritas ticket yang sudah selesai tidak dapat diubah.',
+        ]);
+
         $this->assertSame('biasa', $feature->fresh()->priority);
     }
 }

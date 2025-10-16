@@ -48,12 +48,73 @@ class FeatureRequestController extends Controller
             }
         }
 
+        if (
+            (int) $user->level === UserRole::DIRECTOR_A->value
+            && config('feature-requests.skip_raffa_director_for_wiradadi')
+        ) {
+            $query->where(function ($builder) {
+                $builder
+                    ->where('requester_instansi', '!=', 'wiradadi')
+                    ->orWhere(function ($inner) {
+                        $inner
+                            ->whereNull('requester_instansi')
+                            ->whereHas('user', function ($userQuery) {
+                                $userQuery->where(function ($userInner) {
+                                    $userInner
+                                        ->whereNull('instansi')
+                                        ->orWhere('instansi', '!=', 'wiradadi');
+                                });
+                            });
+                    });
+            });
+        }
+
         $stage = strtolower((string) $request->query('stage', ''));
 
         if ($stage === 'submission') {
             $query->whereIn('status', ['pending', 'approved_manager', 'approved_a']);
         } elseif ($stage === 'development') {
             $query->whereIn('status', ['approved_b', 'done']);
+        }
+
+        $perPage = max(1, min((int) $request->input('per_page', 10), 50));
+
+        return $query->paginate($perPage)->withQueryString();
+    }
+
+    public function monitoring(Request $request)
+    {
+        $tab = strtolower((string) $request->query('tab', 'pengerjaan'));
+
+        $query = FeatureRequest::with([
+            'user:id,name,level,unit_id,instansi',
+            'user.unit:id,name,instansi',
+            'requesterUnit:id,name,instansi,manager_category_id',
+        ])
+            ->withCount('comments')
+            ->orderBy('updated_at', 'desc');
+
+        if ($tab === 'selesai') {
+            $query->where(function ($builder) {
+                $builder
+                    ->where('status', 'done')
+                    ->orWhere(function ($inner) {
+                        $inner
+                            ->where('status', 'approved_b')
+                            ->whereNotNull('development_status')
+                            ->where('development_status', '>=', 4);
+                    });
+            });
+        } else {
+            $query->where(function ($builder) {
+                $builder
+                    ->where('status', 'approved_b')
+                    ->where(function ($progress) {
+                        $progress
+                            ->whereNull('development_status')
+                            ->orWhere('development_status', '<', 4);
+                    });
+            });
         }
 
         $perPage = max(1, min((int) $request->input('per_page', 10), 50));

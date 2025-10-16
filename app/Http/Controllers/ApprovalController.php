@@ -40,7 +40,12 @@ class ApprovalController extends Controller
 
         $featureRequest->loadMissing('user.unit');
 
-        $requiresDirectorA = true;
+        $instansi = $featureRequest->requester_instansi ?? $featureRequest->user?->instansi;
+
+        $requiresDirectorA = ! (
+            $instansi === 'wiradadi'
+            && config('feature-requests.skip_raffa_director_for_wiradadi')
+        );
 
         if ($role->value === UserRole::MANAGER->value) {
             $managerCategoryId = (int) ($user->manager_category_id ?? 0);

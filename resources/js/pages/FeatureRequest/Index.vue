@@ -217,13 +217,18 @@ import { computed } from 'vue'
 import { useFeatureRequestIndex } from '@/ticketing/composables'
 import { ROLE, ROLE_LABELS } from '@/constants/roles'
 
-const stageDefinitions = () => {
+const stageDefinitions = (item = null) => {
+  const requiresDirectorA = item?.requires_director_a_approval !== false
+
   const stages = [
     { role: ROLE.USER, label: ROLE_LABELS[ROLE.USER] },
     { role: ROLE.MANAGER, label: ROLE_LABELS[ROLE.MANAGER] }
   ]
 
-  stages.push({ role: ROLE.DIRECTOR_A, label: ROLE_LABELS[ROLE.DIRECTOR_A] })
+  if (requiresDirectorA) {
+    stages.push({ role: ROLE.DIRECTOR_A, label: ROLE_LABELS[ROLE.DIRECTOR_A] })
+  }
+
   stages.push({ role: ROLE.DIRECTOR_B, label: ROLE_LABELS[ROLE.DIRECTOR_B] })
 
   return stages

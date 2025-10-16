@@ -80,14 +80,14 @@
                     <div class="text-muted small">{{ instansiLabel(item.user?.instansi) }}</div>
                   </td>
                   <td>
-                    <span class="badge bg-success-subtle text-success">{{ item.status_label }}</span>
+                    <span class="badge bg-info text-white">{{ item.development_status_label }}</span>
                   </td>
                   <td>
                     <div class="d-flex flex-wrap align-items-center gap-2">
                       <select
                         class="form-select form-select-sm"
                         :value="localPriorities[item.id]"
-                        :disabled="rowSaving[item.id]"
+                        :disabled="rowSaving[item.id] || isPriorityLocked(item)"
                         @change="(event) => (localPriorities[item.id] = event.target.value)"
                       >
                         <option v-for="option in priorityOptions" :key="option.value" :value="option.value">
@@ -103,7 +103,7 @@
                     <button
                       type="button"
                       class="btn btn-sm rounded-pill btn-primary px-3"
-                      :disabled="rowSaving[item.id]"
+                      :disabled="rowSaving[item.id] || isPriorityLocked(item)"
                       @click="updatePriority(item)"
                     >
                       <span v-if="rowSaving[item.id]" class="spinner-border spinner-border-sm me-2"></span>
@@ -165,6 +165,7 @@ const {
   scopeOptions,
   localPriorities,
   rowSaving,
+  isPriorityLocked,
   setScope,
   updatePriority,
   pageNumbers,

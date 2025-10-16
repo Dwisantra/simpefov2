@@ -18,18 +18,32 @@ class JangmedPriorityController extends Controller
 
         $scope = strtolower((string) $request->query('scope', 'active'));
 
-        $statuses = match ($scope) {
-            'completed' => ['done'],
-            default => ['approved_b'],
-        };
-
         $query = FeatureRequest::with([
             'user:id,name,unit_id,instansi',
             'user.unit:id,name,manager_category_id',
             'requesterUnit:id,name,instansi,manager_category_id',
         ])
-            ->whereIn('status', $statuses)
             ->orderByDesc('updated_at');
+
+        if ($scope === 'completed') {
+            $query->where(function ($builder) {
+                $builder
+                    ->where('status', 'done')
+                    ->orWhere(function ($inner) {
+                        $inner
+                            ->where('status', 'approved_b')
+                            ->whereNotNull('development_status')
+                            ->where('development_status', '>=', 4);
+                    });
+            });
+        } else {
+            $query->where('status', 'approved_b')
+                ->where(function ($builder) {
+                    $builder
+                        ->whereNull('development_status')
+                        ->orWhere('development_status', '<', 4);
+                });
+        }
 
         return $query->paginate($perPage)->withQueryString();
     }
@@ -38,7 +52,13 @@ class JangmedPriorityController extends Controller
     {
         $this->ensureJangmedManager($request);
 
-        if (! in_array($featureRequest->status, ['approved_b', 'done'], true)) {
+        if ($featureRequest->status === 'done' || ($featureRequest->status === 'approved_b' && $featureRequest->development_status !== null && $featureRequest->development_status >= 4)) {
+            return response()->json([
+                'message' => 'Prioritas ticket yang sudah selesai tidak dapat diubah.',
+            ], 422);
+        }
+
+        if ($featureRequest->status !== 'approved_b') {
             return response()->json([
                 'message' => 'Prioritas hanya dapat diatur setelah proses pengajuan selesai.',
             ], 422);
