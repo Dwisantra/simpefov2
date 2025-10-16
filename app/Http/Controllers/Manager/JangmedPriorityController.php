@@ -23,7 +23,11 @@ class JangmedPriorityController extends Controller
             default => ['approved_b'],
         };
 
-        $query = FeatureRequest::with(['user:id,name,unit_id,instansi', 'user.unit:id,name,manager_category_id'])
+        $query = FeatureRequest::with([
+            'user:id,name,unit_id,instansi',
+            'user.unit:id,name,manager_category_id',
+            'requesterUnit:id,name,instansi,manager_category_id',
+        ])
             ->whereIn('status', $statuses)
             ->orderByDesc('updated_at');
 
@@ -49,7 +53,11 @@ class JangmedPriorityController extends Controller
 
         return response()->json([
             'message' => 'Prioritas ticket berhasil diperbarui.',
-            'feature' => $featureRequest->fresh(['user:id,name,unit_id,instansi', 'user.unit:id,name,manager_category_id']),
+            'feature' => $featureRequest->fresh([
+                'user:id,name,unit_id,instansi',
+                'user.unit:id,name,manager_category_id',
+                'requesterUnit:id,name,instansi,manager_category_id',
+            ]),
         ]);
     }
 

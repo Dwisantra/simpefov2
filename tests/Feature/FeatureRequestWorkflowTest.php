@@ -46,7 +46,7 @@ class FeatureRequestWorkflowTest extends TestCase
             'priority' => 'biasa',
             'development_status' => 1,
             'request_types' => ['new_feature'],
-            'requester_unit' => $requester->unit?->name ?? 'Unit',
+            'requester_unit_id' => $requester->unit?->id,
             'requester_instansi' => $requester->instansi ?? 'wiradadi',
             'manager_category_id' => $requester->unit?->manager_category_id,
         ]);
@@ -156,5 +156,70 @@ class FeatureRequestWorkflowTest extends TestCase
         $response->assertStatus(403);
 
         $this->assertDatabaseCount('approvals', 0);
+    }
+
+    public function test_wiradadi_request_requires_raffa_director_before_wiradadi_director(): void
+    {
+        $unit = $this->createUnitWithCategory(ManagerCategory::YANMED->value, 'wiradadi');
+        $requester = $this->createUserForUnit($unit);
+        $feature = $this->createFeatureRequest($requester, 'pending');
+
+        $manager = User::factory()->create([
+            'level' => UserRole::MANAGER->value,
+            'manager_category_id' => $unit->manager_category_id,
+            'verified_at' => now(),
+            'kode_sign' => Hash::make('1111'),
+            'instansi' => $unit->instansi,
+        ]);
+
+        $directorRaffa = User::factory()->create([
+            'level' => UserRole::DIRECTOR_A->value,
+            'verified_at' => now(),
+            'kode_sign' => Hash::make('2222'),
+            'instansi' => 'raffa',
+        ]);
+
+        $directorWiradadi = User::factory()->create([
+            'level' => UserRole::DIRECTOR_B->value,
+            'verified_at' => now(),
+            'kode_sign' => Hash::make('3333'),
+            'instansi' => 'wiradadi',
+        ]);
+
+        Sanctum::actingAs($manager);
+
+        $this->postJson("/api/feature-requests/{$feature->id}/approve", [
+            'sign_code' => '1111',
+        ])->assertOk();
+
+        $feature->refresh();
+        $this->assertSame('approved_manager', $feature->status);
+
+        Sanctum::actingAs($directorWiradadi);
+
+        $this->postJson("/api/feature-requests/{$feature->id}/approve", [
+            'sign_code' => '3333',
+        ])->assertStatus(422);
+
+        $feature->refresh();
+        $this->assertSame('approved_manager', $feature->status);
+
+        Sanctum::actingAs($directorRaffa);
+
+        $this->postJson("/api/feature-requests/{$feature->id}/approve", [
+            'sign_code' => '2222',
+        ])->assertOk();
+
+        $feature->refresh();
+        $this->assertSame('approved_a', $feature->status);
+
+        Sanctum::actingAs($directorWiradadi);
+
+        $this->postJson("/api/feature-requests/{$feature->id}/approve", [
+            'sign_code' => '3333',
+        ])->assertOk();
+
+        $feature->refresh();
+        $this->assertSame('approved_b', $feature->status);
     }
 }

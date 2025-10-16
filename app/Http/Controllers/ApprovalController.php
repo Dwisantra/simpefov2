@@ -40,7 +40,7 @@ class ApprovalController extends Controller
 
         $featureRequest->loadMissing('user.unit');
 
-        $requiresDirectorA = $featureRequest->requester_instansi !== 'wiradadi';
+        $requiresDirectorA = true;
 
         if ($role->value === UserRole::MANAGER->value) {
             $managerCategoryId = (int) ($user->manager_category_id ?? 0);

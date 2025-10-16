@@ -36,7 +36,13 @@
                     <span class="fw-semibold">Diajukan Oleh:</span> {{ feature.user?.name }}
                   </span>
                   <span class="d-inline-flex align-items-center gap-2 me-3">
-                    <span class="fw-semibold">Unit:</span> {{ feature.requester_unit || feature.user?.unit?.name || '-' }}
+                    <span class="fw-semibold">Unit:</span>
+                    {{
+                      feature.requester_unit?.name ||
+                        feature.requester_unit_name ||
+                        feature.user?.unit?.name ||
+                        '-'
+                    }}
                   </span>
                   <span class="d-inline-flex align-items-center gap-2">
                     <span class="fw-semibold">Instansi:</span>

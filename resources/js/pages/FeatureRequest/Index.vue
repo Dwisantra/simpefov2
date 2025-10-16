@@ -147,7 +147,14 @@
                   <div class="ticket-meta-copy">
                     <small class="text-muted d-block">Diajukan oleh</small>
                     <span class="fw-semibold d-block">{{ item.user?.name }}</span>
-                    <p class="text-muted small mb-1">{{ item.requester_unit || item.user?.unit?.name || '-' }}</p>
+                    <p class="text-muted small mb-1">
+                      {{
+                        item.requester_unit?.name ||
+                          item.requester_unit_name ||
+                          item.user?.unit?.name ||
+                          '-'
+                      }}
+                    </p>
                     <p class="text-muted small mb-3">{{ instansiLabel(item.requester_instansi || item.user?.instansi) }}</p>
                     <p class="text-muted mb-0">{{ formatDate(item.created_at) }}</p>
                   </div>
@@ -210,18 +217,13 @@ import { computed } from 'vue'
 import { useFeatureRequestIndex } from '@/ticketing/composables'
 import { ROLE, ROLE_LABELS } from '@/constants/roles'
 
-const stageDefinitions = (item) => {
-  const instansi = item?.requester_instansi || item?.user?.instansi
-
+const stageDefinitions = () => {
   const stages = [
     { role: ROLE.USER, label: ROLE_LABELS[ROLE.USER] },
     { role: ROLE.MANAGER, label: ROLE_LABELS[ROLE.MANAGER] }
   ]
 
-  if (instansi !== 'wiradadi') {
-    stages.push({ role: ROLE.DIRECTOR_A, label: ROLE_LABELS[ROLE.DIRECTOR_A] })
-  }
-
+  stages.push({ role: ROLE.DIRECTOR_A, label: ROLE_LABELS[ROLE.DIRECTOR_A] })
   stages.push({ role: ROLE.DIRECTOR_B, label: ROLE_LABELS[ROLE.DIRECTOR_B] })
 
   return stages

@@ -19,6 +19,7 @@ class FeatureRequestController extends Controller
             'approvals.user:id,name,level',
             'user:id,name,level,unit_id,instansi',
             'user.unit:id,name,instansi',
+            'requesterUnit:id,name,instansi,manager_category_id',
         ])
             ->withCount('comments')
             ->orderBy('created_at', 'desc');
@@ -132,7 +133,7 @@ class FeatureRequestController extends Controller
             'development_status' => 1,
             'priority' => 'biasa',
             'request_types' => $requestTypes,
-            'requester_unit' => $user->unit?->name,
+            'requester_unit_id' => $user->unit_id,
             'requester_instansi' => $user->instansi,
             'manager_category_id' => $user->unit?->manager_category_id,
             'attachment_path' => $attachmentPath,
@@ -151,6 +152,7 @@ class FeatureRequestController extends Controller
             'approvals.user:id,name,level',
             'user:id,name,level,unit_id,instansi',
             'user.unit:id,name,instansi',
+            'requesterUnit:id,name,instansi,manager_category_id',
         ])->loadCount('comments');
 
         return response()->json($feature, 201);
@@ -169,6 +171,7 @@ class FeatureRequestController extends Controller
                 'approvals.user:id,name,level',
                 'user:id,name,level,unit_id,instansi',
                 'user.unit:id,name,instansi',
+                'requesterUnit:id,name,instansi,manager_category_id',
                 'comments.user:id,name,level'
             ])
             ->loadCount('comments');
@@ -224,6 +227,7 @@ class FeatureRequestController extends Controller
             'approvals.user:id,name,level',
             'user:id,name,level,unit_id,instansi',
             'user.unit:id,name,instansi',
+            'requesterUnit:id,name,instansi,manager_category_id',
             'comments.user:id,name,level'
         ])->loadCount('comments');
     }

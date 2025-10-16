@@ -74,6 +74,7 @@ class FeatureRequestGitlabController extends Controller
             'approvals.user:id,name,level',
             'user:id,name,level,unit_id,instansi',
             'user.unit:id,name,instansi',
+            'requesterUnit:id,name,instansi,manager_category_id',
             'comments.user:id,name,level',
         ])->loadCount('comments');
 
@@ -120,7 +121,7 @@ class FeatureRequestGitlabController extends Controller
             sprintf('- **Status:** %s', $featureRequest->status_label ?? ucfirst($featureRequest->status ?? '-')),
             sprintf('- **Status Pengembangan:** %s', $featureRequest->development_status_label ?? '-'),
             sprintf('- **Pemohon:** %s', $featureRequest->user?->name ?? '-'),
-            sprintf('- **Unit:** %s', $featureRequest->requester_unit ?? $featureRequest->user?->unit?->name ?? '-'),
+            sprintf('- **Unit:** %s', $featureRequest->requesterUnit?->name ?? $featureRequest->user?->unit?->name ?? '-'),
             sprintf('- **Instansi:** %s', $featureRequest->requester_instansi ?? $featureRequest->user?->instansi ?? '-'),
             '',
             '### Deskripsi Pengajuan',

@@ -16,13 +16,9 @@ const statusLabels = {
   done: 'Selesai'
 }
 
-const resolveStatusLabel = (status, instansi = null) => {
+const resolveStatusLabel = (status, _instansi = null) => {
   if (!status) {
     return '-'
-  }
-
-  if (instansi === 'wiradadi' && status === 'approved_manager') {
-    return statusLabels.approved_a
   }
 
   return statusLabels[status] ?? status
@@ -476,7 +472,7 @@ export function useFeatureRequestIndex() {
 
   const baseTotalSteps = 4
 
-  const totalSteps = (item) => (item?.requester_instansi === 'wiradadi' ? 3 : baseTotalSteps)
+  const totalSteps = () => baseTotalSteps
 
   const instansiLabel = (value) => {
     const map = {
@@ -489,21 +485,6 @@ export function useFeatureRequestIndex() {
 
   const progressFromStatus = (item) => {
     const status = typeof item === 'object' ? item?.status : item
-    const instansi =
-      (typeof item === 'object' && (item?.requester_instansi || item?.user?.instansi)) || null
-
-    if (instansi === 'wiradadi') {
-      const wiradadiMap = {
-        pending: 1,
-        approved_manager: 2,
-        approved_a: 2,
-        approved_b: 3,
-        done: 3
-      }
-
-      return wiradadiMap[status] ?? 0
-    }
-
     const defaultMap = {
       pending: 1,
       approved_manager: 2,
@@ -1013,8 +994,6 @@ export function useFeatureRequestDetail() {
   )
 
   const steps = computed(() => {
-    const isWiradadi = feature.value?.requester_instansi === 'wiradadi'
-
     const definitions = [
       {
         role: ROLE.USER,
@@ -1025,22 +1004,18 @@ export function useFeatureRequestDetail() {
         role: ROLE.MANAGER,
         title: 'Persetujuan Manager',
         description: 'Manager memvalidasi kebutuhan dan kesesuaian form.'
-      }
-    ]
-
-    if (!isWiradadi) {
-      definitions.push({
+      },
+      {
         role: ROLE.DIRECTOR_A,
         title: 'Direktur RS Raffa Majenang',
         description: 'Direktur RS Raffa Majenang melakukan verifikasi lanjutan.'
-      })
-    }
-
-    definitions.push({
-      role: ROLE.DIRECTOR_B,
-      title: 'Direktur RS Wiradadi Husada',
-      description: 'Direktur RS Wiradadi Husada menyetujui final sebelum implementasi.'
-    })
+      },
+      {
+        role: ROLE.DIRECTOR_B,
+        title: 'Direktur RS Wiradadi Husada',
+        description: 'Direktur RS Wiradadi Husada menyetujui final sebelum implementasi.'
+      }
+    ]
 
     let previousCompleted = true
 
@@ -1125,16 +1100,13 @@ export function useFeatureRequestDetail() {
 
   const currentStageRole = computed(() => {
     const status = feature.value?.status
-    const instansi = feature.value?.requester_instansi
-
-    if (status === 'approved_manager') {
-      return instansi === 'wiradadi' ? ROLE.DIRECTOR_B : ROLE.DIRECTOR_A
-    }
 
     const map = {
       pending: ROLE.MANAGER,
+      approved_manager: ROLE.DIRECTOR_A,
       approved_a: ROLE.DIRECTOR_B
     }
+
     return map[status] ?? null
   })
 

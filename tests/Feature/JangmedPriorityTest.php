@@ -55,7 +55,7 @@ class JangmedPriorityTest extends TestCase
             'priority' => 'biasa',
             'development_status' => 1,
             'request_types' => ['new_feature'],
-            'requester_unit' => $requester->unit?->name ?? 'IT',
+            'requester_unit_id' => $requester->unit?->id,
             'requester_instansi' => $requester->instansi ?? 'wiradadi',
             'manager_category_id' => $requester->unit?->manager_category_id,
         ], $attributes));
@@ -126,7 +126,7 @@ class JangmedPriorityTest extends TestCase
         $other = $this->createFeature($yanmumRequester, [
             'status' => 'approved_b',
             'manager_category_id' => ManagerCategory::YANMUM->value,
-            'requester_unit' => $yanmumRequester->unit->name,
+            'requester_unit_id' => $yanmumRequester->unit->id,
             'requester_instansi' => $yanmumRequester->unit->instansi,
         ]);
 

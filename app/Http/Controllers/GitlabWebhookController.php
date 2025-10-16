@@ -67,8 +67,9 @@ class GitlabWebhookController extends Controller
                 'development_status' => $this->mapIssueStateToDevelopmentStatus(Arr::get($attributes, 'state')) ?? 1,
                 'priority' => 'biasa',
                 'request_types' => ['gitlab_issue'],
-                'requester_unit' => $user->unit?->name,
+                'requester_unit_id' => $user->unit_id,
                 'requester_instansi' => $user->instansi,
+                'manager_category_id' => $user->unit?->manager_category_id,
             ]);
 
             $message = 'Issue GitLab baru ditautkan.';

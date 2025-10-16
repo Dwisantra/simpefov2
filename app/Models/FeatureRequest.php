@@ -30,7 +30,7 @@ class FeatureRequest extends Model
         'development_status',
         'priority',
         'request_types',
-        'requester_unit',
+        'requester_unit_id',
         'requester_instansi',
         'manager_category_id',
         'attachment_path',
@@ -55,6 +55,7 @@ class FeatureRequest extends Model
         'development_status_label',
         'workflow_stage',
         'workflow_stage_label',
+        'requester_unit_name',
     ];
 
     protected $casts = [
@@ -62,6 +63,7 @@ class FeatureRequest extends Model
         'gitlab_synced_at' => 'datetime',
         'development_status' => 'integer',
         'manager_category_id' => 'integer',
+        'requester_unit_id' => 'integer',
     ];
 
     public function approvals()
@@ -79,6 +81,11 @@ class FeatureRequest extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function requesterUnit()
+    {
+        return $this->belongsTo(Unit::class, 'requester_unit_id');
+    }
+
     public function getRouteKeyName(): string
     {
         return 'id';
@@ -86,10 +93,6 @@ class FeatureRequest extends Model
 
     public function getStatusLabelAttribute(): string
     {
-        if ($this->requester_instansi === 'wiradadi' && $this->status === 'approved_manager') {
-            return 'Menunggu Direktur RS Wiradadi Husada';
-        }
-
         return match ($this->status) {
             'pending' => 'Menunggu ACC Manager',
             'approved_manager' => 'Menunggu Direktur RS Raffa Majenang',
@@ -101,15 +104,6 @@ class FeatureRequest extends Model
 
     public function getStatusProgressAttribute(): int
     {
-        if ($this->requester_instansi === 'wiradadi') {
-            return match ($this->status) {
-                'pending' => 1,
-                'approved_manager', 'approved_a' => 2,
-                'approved_b', 'done' => 3,
-                default => 0,
-            };
-        }
-
         $map = [
             'pending' => 1,
             'approved_manager' => 2,
@@ -132,10 +126,6 @@ class FeatureRequest extends Model
 
     public function getCurrentStageRoleAttribute(): ?int
     {
-        if ($this->requester_instansi === 'wiradadi' && $this->status === 'approved_manager') {
-            return UserRole::DIRECTOR_B->value;
-        }
-
         return match ($this->status) {
             'pending' => UserRole::MANAGER->value,
             'approved_manager' => UserRole::DIRECTOR_A->value,
@@ -202,5 +192,10 @@ class FeatureRequest extends Model
         return $this->workflow_stage === 'development'
             ? 'Tahap Pengerjaan'
             : 'Tahap Pengajuan';
+    }
+
+    public function getRequesterUnitNameAttribute(): ?string
+    {
+        return $this->requesterUnit?->name ?? $this->user?->unit?->name;
     }
 }
