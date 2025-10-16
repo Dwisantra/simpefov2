@@ -149,6 +149,62 @@
                 </tbody>
               </table>
             </div>
+            <div
+              v-if="unitPagination.total > 0"
+              class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2 mt-3"
+            >
+              <div class="text-muted small">
+                Menampilkan {{ unitPagination.from || 0 }}-{{ unitPagination.to || 0 }} dari
+                {{ unitPagination.total }} unit
+              </div>
+              <div class="d-flex flex-wrap align-items-center gap-2">
+                <div class="d-flex align-items-center gap-2">
+                  <label class="text-muted small mb-0">Baris per halaman</label>
+                  <select
+                    class="form-select form-select-sm w-auto"
+                    :value="unitPagination.perPage"
+                    @change="updateUnitPerPage($event.target.value)"
+                    :disabled="loadingUnits"
+                  >
+                    <option v-for="option in paginationPerPageOptions" :key="`unit-per-${option}`" :value="option">
+                      {{ option }}
+                    </option>
+                  </select>
+                </div>
+                <nav aria-label="Navigasi halaman unit">
+                  <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item" :class="{ disabled: loadingUnits || unitPagination.currentPage === 1 }">
+                      <button
+                        class="page-link"
+                        type="button"
+                        @click="changeUnitPage(unitPagination.currentPage - 1)"
+                        :disabled="loadingUnits || unitPagination.currentPage === 1"
+                      >
+                        Sebelumnya
+                      </button>
+                    </li>
+                    <li class="page-item disabled">
+                      <span class="page-link">
+                        Halaman {{ unitPagination.currentPage }} / {{ unitPagination.lastPage || 1 }}
+                      </span>
+                    </li>
+                    <li
+                      class="page-item"
+                      :class="{ disabled: loadingUnits || unitPagination.currentPage >= unitPagination.lastPage }"
+                    >
+                      <button
+                        class="page-link"
+                        type="button"
+                        @click="changeUnitPage(unitPagination.currentPage + 1)"
+                        :disabled="loadingUnits || unitPagination.currentPage >= unitPagination.lastPage"
+                      >
+                        Berikutnya
+                      </button>
+                    </li>
+                  </ul>
+                </nav>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -255,6 +311,62 @@
             </tbody>
           </table>
         </div>
+        <div
+          v-if="userPagination.total > 0"
+          class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2 mt-3"
+        >
+          <div class="text-muted small">
+            Menampilkan {{ userPagination.from || 0 }}-{{ userPagination.to || 0 }} dari
+            {{ userPagination.total }} pengguna
+          </div>
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <div class="d-flex align-items-center gap-2">
+              <label class="text-muted small mb-0">Baris per halaman</label>
+              <select
+                class="form-select form-select-sm w-auto"
+                :value="userPagination.perPage"
+                @change="updateUserPerPage($event.target.value)"
+                :disabled="loadingUsers"
+              >
+                <option v-for="option in paginationPerPageOptions" :key="`user-per-${option}`" :value="option">
+                  {{ option }}
+                </option>
+              </select>
+            </div>
+            <nav aria-label="Navigasi halaman pengguna">
+              <ul class="pagination pagination-sm mb-0">
+                <li class="page-item" :class="{ disabled: loadingUsers || userPagination.currentPage === 1 }">
+                  <button
+                    class="page-link"
+                    type="button"
+                    @click="changeUserPage(userPagination.currentPage - 1)"
+                    :disabled="loadingUsers || userPagination.currentPage === 1"
+                  >
+                    Sebelumnya
+                  </button>
+                </li>
+                <li class="page-item disabled">
+                  <span class="page-link">
+                    Halaman {{ userPagination.currentPage }} / {{ userPagination.lastPage || 1 }}
+                  </span>
+                </li>
+                <li
+                  class="page-item"
+                  :class="{ disabled: loadingUsers || userPagination.currentPage >= userPagination.lastPage }"
+                >
+                  <button
+                    class="page-link"
+                    type="button"
+                    @click="changeUserPage(userPagination.currentPage + 1)"
+                    :disabled="loadingUsers || userPagination.currentPage >= userPagination.lastPage"
+                  >
+                    Berikutnya
+                  </button>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -269,6 +381,8 @@ const {
   roleOptions,
   units,
   users,
+  unitPagination,
+  userPagination,
   loadingUnits,
   loadingUsers,
   savingUnit,
@@ -290,10 +404,16 @@ const {
   changeUserUnit,
   changeUserRole,
   toggleUserVerification,
-  verifiedBadgeClass
+  verifiedBadgeClass,
+  changeUnitPage,
+  changeUserPage,
+  updateUnitPerPage,
+  updateUserPerPage
 } = useAdminMaster()
 
 const combinedLoading = computed(() => loadingUnits.value || loadingUsers.value)
+
+const paginationPerPageOptions = Object.freeze([5, 10, 25, 50])
 
 const instansiLabel = (value) => {
   const option = instansiOptions.find((item) => item.value === value)

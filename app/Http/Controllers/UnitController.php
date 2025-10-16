@@ -20,7 +20,16 @@ class UnitController extends Controller
     {
         $this->ensureAdmin($request);
 
-        return Unit::orderBy('name')->get();
+        $query = Unit::orderBy('name');
+
+        if ($request->boolean('all')) {
+            return $query->get();
+        }
+
+        $perPage = (int) $request->integer('per_page', 10);
+        $perPage = max(1, min($perPage, 50));
+
+        return $query->paginate($perPage);
     }
 
     public function store(Request $request)

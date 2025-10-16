@@ -1741,6 +1741,22 @@ export function useAdminMaster() {
 
   const units = ref([])
   const users = ref([])
+  const unitPagination = reactive({
+    currentPage: 1,
+    perPage: 10,
+    total: 0,
+    lastPage: 1,
+    from: 0,
+    to: 0
+  })
+  const userPagination = reactive({
+    currentPage: 1,
+    perPage: 10,
+    total: 0,
+    lastPage: 1,
+    from: 0,
+    to: 0
+  })
   const loadingUnits = ref(false)
   const loadingUsers = ref(false)
   const savingUnit = ref(false)
@@ -1750,6 +1766,7 @@ export function useAdminMaster() {
   const userMessage = ref('')
   const userMessageType = ref('')
   const userSaving = reactive({})
+  const allUnits = ref([])
 
   const unitForm = reactive({
     id: null,
@@ -1798,24 +1815,107 @@ export function useAdminMaster() {
     }
   }
 
-  const fetchUnits = async () => {
+  const sanitizePage = (value, fallback = 1) => {
+    const parsed = Number(value)
+    if (!Number.isFinite(parsed) || parsed < 1) {
+      return fallback
+    }
+
+    return parsed
+  }
+
+  const sanitizePerPage = (value, fallback = 10) => {
+    const parsed = Number(value)
+    if (!Number.isFinite(parsed) || parsed < 1) {
+      return fallback
+    }
+
+    return Math.min(parsed, 50)
+  }
+
+  const resetPagination = (state) => {
+    state.currentPage = 1
+    state.lastPage = 1
+    state.total = 0
+    state.from = 0
+    state.to = 0
+  }
+
+  const fetchUnits = async (page = unitPagination.currentPage) => {
     loadingUnits.value = true
     try {
-      const { data } = await axios.get('/units')
-      units.value = Array.isArray(data) ? sortUnits(data) : []
+      const targetPage = sanitizePage(page, unitPagination.currentPage)
+      const { data } = await axios.get('/units', {
+        params: {
+          page: targetPage,
+          per_page: sanitizePerPage(unitPagination.perPage)
+        }
+      })
+
+      if (Array.isArray(data?.data)) {
+        units.value = sortUnits(data.data)
+      } else if (Array.isArray(data)) {
+        units.value = sortUnits(data)
+      } else {
+        units.value = []
+      }
+
+      const hasItems = units.value.length > 0
+      unitPagination.currentPage = sanitizePage(data?.current_page, targetPage)
+      unitPagination.perPage = sanitizePerPage(data?.per_page, unitPagination.perPage)
+      unitPagination.total = Number.isFinite(Number(data?.total)) ? Number(data.total) : units.value.length
+      unitPagination.lastPage = Math.max(1, sanitizePage(data?.last_page, 1))
+      unitPagination.from = Number.isFinite(Number(data?.from)) ? Number(data.from) : hasItems ? 1 : 0
+      unitPagination.to = Number.isFinite(Number(data?.to)) ? Number(data.to) : hasItems ? units.value.length : 0
     } catch (error) {
+      units.value = []
+      resetPagination(unitPagination)
       showUnitMessage('danger', error?.response?.data?.message ?? 'Gagal memuat daftar unit.')
     } finally {
       loadingUnits.value = false
     }
   }
 
-  const fetchUsers = async () => {
+  const fetchAllUnits = async () => {
+    try {
+      const { data } = await axios.get('/units', {
+        params: { all: true }
+      })
+      allUnits.value = Array.isArray(data) ? sortUnits(data) : []
+    } catch (error) {
+      allUnits.value = []
+    }
+  }
+
+  const fetchUsers = async (page = userPagination.currentPage) => {
     loadingUsers.value = true
     try {
-      const { data } = await axios.get('/admin/users')
-      users.value = Array.isArray(data) ? data : []
+      const targetPage = sanitizePage(page, userPagination.currentPage)
+      const { data } = await axios.get('/admin/users', {
+        params: {
+          page: targetPage,
+          per_page: sanitizePerPage(userPagination.perPage)
+        }
+      })
+
+      if (Array.isArray(data?.data)) {
+        users.value = data.data
+      } else if (Array.isArray(data)) {
+        users.value = data
+      } else {
+        users.value = []
+      }
+
+      const hasItems = users.value.length > 0
+      userPagination.currentPage = sanitizePage(data?.current_page, targetPage)
+      userPagination.perPage = sanitizePerPage(data?.per_page, userPagination.perPage)
+      userPagination.total = Number.isFinite(Number(data?.total)) ? Number(data.total) : users.value.length
+      userPagination.lastPage = Math.max(1, sanitizePage(data?.last_page, 1))
+      userPagination.from = Number.isFinite(Number(data?.from)) ? Number(data.from) : hasItems ? 1 : 0
+      userPagination.to = Number.isFinite(Number(data?.to)) ? Number(data.to) : hasItems ? users.value.length : 0
     } catch (error) {
+      users.value = []
+      resetPagination(userPagination)
       showUserMessage('danger', error?.response?.data?.message ?? 'Gagal memuat daftar pengguna.')
     } finally {
       loadingUsers.value = false
@@ -1824,6 +1924,7 @@ export function useAdminMaster() {
 
   onMounted(() => {
     fetchUnits()
+    fetchAllUnits()
     fetchUsers()
   })
 
@@ -1858,14 +1959,13 @@ export function useAdminMaster() {
     try {
       if (unitForm.id) {
         const { data } = await axios.put(`/units/${unitForm.id}`, payload)
-        units.value = sortUnits(units.value.map((item) => (item.id === data.id ? data : item)))
-        showUnitMessage('success', 'Unit berhasil diperbarui.')
+        showUnitMessage('success', `Unit ${data.name ?? unitForm.name} berhasil diperbarui.`)
       } else {
         const { data } = await axios.post('/units', payload)
-        units.value = sortUnits([...units.value, data])
-        showUnitMessage('success', 'Unit baru berhasil ditambahkan.')
+        showUnitMessage('success', `Unit ${data.name ?? unitForm.name} berhasil ditambahkan.`)
       }
       resetUnitForm()
+      await Promise.all([fetchUnits(unitPagination.currentPage), fetchAllUnits()])
     } catch (error) {
       showUnitMessage('danger', error?.response?.data?.message ?? 'Gagal menyimpan data unit.')
     } finally {
@@ -1882,8 +1982,8 @@ export function useAdminMaster() {
       const { data } = await axios.put(`/units/${unit.id}`, {
         is_active: !unit.is_active
       })
-      units.value = sortUnits(units.value.map((item) => (item.id === data.id ? data : item)))
-      showUnitMessage('success', `Status unit ${data.name} diperbarui.`)
+      showUnitMessage('success', `Status unit ${data.name ?? unit.name} diperbarui.`)
+      await Promise.all([fetchAllUnits(), fetchUnits(unitPagination.currentPage)])
     } catch (error) {
       showUnitMessage('danger', error?.response?.data?.message ?? 'Gagal memperbarui status unit.')
     }
@@ -1893,8 +1993,11 @@ export function useAdminMaster() {
     deletingUnitId.value = unit.id
     try {
       await axios.delete(`/units/${unit.id}`)
-      units.value = units.value.filter((item) => item.id !== unit.id)
       showUnitMessage('success', 'Unit berhasil dihapus.')
+      const targetPage = units.value.length <= 1 && unitPagination.currentPage > 1
+        ? unitPagination.currentPage - 1
+        : unitPagination.currentPage
+      await Promise.all([fetchAllUnits(), fetchUnits(targetPage)])
     } catch (error) {
       showUnitMessage('danger', error?.response?.data?.message ?? 'Unit tidak dapat dihapus.')
     } finally {
@@ -1903,12 +2006,58 @@ export function useAdminMaster() {
   }
 
   const unitsForInstansi = (instansi) =>
-    units.value.filter((unit) => {
+    allUnits.value.filter((unit) => {
       if (!instansi) {
         return unit.is_active
       }
       return unit.instansi === instansi && unit.is_active
     })
+
+  const changeUnitPage = (page) => {
+    if (loadingUnits.value) {
+      return
+    }
+
+    const target = sanitizePage(page, unitPagination.currentPage)
+    if (target === unitPagination.currentPage || target < 1 || target > unitPagination.lastPage) {
+      return
+    }
+
+    fetchUnits(target)
+  }
+
+  const changeUserPage = (page) => {
+    if (loadingUsers.value) {
+      return
+    }
+
+    const target = sanitizePage(page, userPagination.currentPage)
+    if (target === userPagination.currentPage || target < 1 || target > userPagination.lastPage) {
+      return
+    }
+
+    fetchUsers(target)
+  }
+
+  const updateUnitPerPage = (value) => {
+    const perPage = sanitizePerPage(value, unitPagination.perPage)
+    if (perPage === unitPagination.perPage) {
+      return
+    }
+
+    unitPagination.perPage = perPage
+    fetchUnits(1)
+  }
+
+  const updateUserPerPage = (value) => {
+    const perPage = sanitizePerPage(value, userPagination.perPage)
+    if (perPage === userPagination.perPage) {
+      return
+    }
+
+    userPagination.perPage = perPage
+    fetchUsers(1)
+  }
 
   const setUserSaving = (userId, state) => {
     userSaving[userId] = state
@@ -1971,6 +2120,8 @@ export function useAdminMaster() {
     roleOptions,
     units,
     users,
+    unitPagination,
+    userPagination,
     loadingUnits,
     loadingUsers,
     savingUnit,
@@ -1992,6 +2143,10 @@ export function useAdminMaster() {
     changeUserUnit,
     changeUserRole,
     toggleUserVerification,
-    verifiedBadgeClass
+    verifiedBadgeClass,
+    changeUnitPage,
+    changeUserPage,
+    updateUnitPerPage,
+    updateUserPerPage
   }
 }

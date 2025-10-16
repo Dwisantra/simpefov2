@@ -15,9 +15,12 @@ class UserManagementController extends Controller
     {
         $this->ensureAdmin($request);
 
+        $perPage = (int) $request->integer('per_page', 10);
+        $perPage = max(1, min($perPage, 50));
+
         return User::with('unit')
             ->orderBy('name')
-            ->get();
+            ->paginate($perPage);
     }
 
     public function update(Request $request, User $user)
