@@ -12,30 +12,51 @@ return new class extends Migration
     public function up(): void
     {
         $map = [
-            'user' => UserRole::USER->value,
-            'manager' => UserRole::MANAGER->value,
+            'user'       => UserRole::USER->value,
+            'manager'    => UserRole::MANAGER->value,
             'director_a' => UserRole::DIRECTOR_A->value,
             'director_b' => UserRole::DIRECTOR_B->value,
-            'admin' => UserRole::ADMIN->value,
+            'admin'      => UserRole::ADMIN->value,
         ];
-
-        foreach ($map as $string => $id) {
-            DB::table('users')->where('level', $string)->update(['level' => $id]);
-            DB::table('approvals')->where('role', $string)->update(['role' => $id]);
-        }
 
         $driver = DB::getDriverName();
 
+        // Ekspresi cast per driver
         if ($driver === 'mysql') {
-            DB::statement('ALTER TABLE `users` MODIFY `level` TINYINT UNSIGNED NOT NULL DEFAULT 1');
-            DB::statement('ALTER TABLE `approvals` MODIFY `role` TINYINT UNSIGNED NOT NULL');
+            $castLevel = 'CAST(`level` AS CHAR)';
+            $castRole  = 'CAST(`role` AS CHAR)';
         } elseif ($driver === 'pgsql') {
-            DB::statement('ALTER TABLE users ALTER COLUMN level TYPE SMALLINT USING level::integer');
-            DB::statement('ALTER TABLE users ALTER COLUMN level SET NOT NULL');
-            DB::statement('ALTER TABLE users ALTER COLUMN level SET DEFAULT 1');
-            DB::statement('ALTER TABLE approvals ALTER COLUMN role TYPE SMALLINT USING role::integer');
-            DB::statement('ALTER TABLE approvals ALTER COLUMN role SET NOT NULL');
+            $castLevel = 'CAST(level AS TEXT)';
+            $castRole  = 'CAST(role AS TEXT)';
+        } else {
+            // fallback: tanpa cast
+            $castLevel = 'level';
+            $castRole  = 'role';
         }
+
+        DB::transaction(function () use ($map, $castLevel, $castRole, $driver) {
+            foreach ($map as $string => $id) {
+                DB::table('users')
+                    ->whereRaw("$castLevel = ?", [$string])
+                    ->update(['level' => $id]);
+
+                DB::table('approvals')
+                    ->whereRaw("$castRole = ?", [$string])
+                    ->update(['role' => $id]);
+            }
+
+            // Setelah data termigrasi, baru ubah tipe kolom
+            if ($driver === 'mysql') {
+                DB::statement('ALTER TABLE `users` MODIFY `level` TINYINT UNSIGNED NOT NULL DEFAULT 1');
+                DB::statement('ALTER TABLE `approvals` MODIFY `role` TINYINT UNSIGNED NOT NULL');
+            } elseif ($driver === 'pgsql') {
+                DB::statement('ALTER TABLE users ALTER COLUMN level TYPE SMALLINT USING level::integer');
+                DB::statement('ALTER TABLE users ALTER COLUMN level SET NOT NULL');
+                DB::statement('ALTER TABLE users ALTER COLUMN level SET DEFAULT 1');
+                DB::statement('ALTER TABLE approvals ALTER COLUMN role TYPE SMALLINT USING role::integer');
+                DB::statement('ALTER TABLE approvals ALTER COLUMN role SET NOT NULL');
+            }
+        });
     }
 
     /**
