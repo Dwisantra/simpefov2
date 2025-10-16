@@ -21,7 +21,7 @@ return new class extends Migration
 
         $driver = DB::getDriverName();
 
-        // Ekspresi cast per driver
+        // Ekspresi cast per driver (agar aman kalau kolom sudah numeric)
         if ($driver === 'mysql') {
             $castLevel = 'CAST(`level` AS CHAR)';
             $castRole  = 'CAST(`role` AS CHAR)';
@@ -29,12 +29,13 @@ return new class extends Migration
             $castLevel = 'CAST(level AS TEXT)';
             $castRole  = 'CAST(role AS TEXT)';
         } else {
-            // fallback: tanpa cast
             $castLevel = 'level';
             $castRole  = 'role';
         }
 
-        DB::transaction(function () use ($map, $castLevel, $castRole, $driver) {
+        // 1) Transaksi hanya untuk data UPDATE (aman untuk MySQL & PG)
+        DB::beginTransaction();
+        try {
             foreach ($map as $string => $id) {
                 DB::table('users')
                     ->whereRaw("$castLevel = ?", [$string])
@@ -44,19 +45,23 @@ return new class extends Migration
                     ->whereRaw("$castRole = ?", [$string])
                     ->update(['role' => $id]);
             }
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            throw $e;
+        }
 
-            // Setelah data termigrasi, baru ubah tipe kolom
-            if ($driver === 'mysql') {
-                DB::statement('ALTER TABLE `users` MODIFY `level` TINYINT UNSIGNED NOT NULL DEFAULT 1');
-                DB::statement('ALTER TABLE `approvals` MODIFY `role` TINYINT UNSIGNED NOT NULL');
-            } elseif ($driver === 'pgsql') {
-                DB::statement('ALTER TABLE users ALTER COLUMN level TYPE SMALLINT USING level::integer');
-                DB::statement('ALTER TABLE users ALTER COLUMN level SET NOT NULL');
-                DB::statement('ALTER TABLE users ALTER COLUMN level SET DEFAULT 1');
-                DB::statement('ALTER TABLE approvals ALTER COLUMN role TYPE SMALLINT USING role::integer');
-                DB::statement('ALTER TABLE approvals ALTER COLUMN role SET NOT NULL');
-            }
-        });
+        // 2) DDL di luar transaksi (hindari implicit commit problem di MySQL)
+        if ($driver === 'mysql') {
+            DB::statement('ALTER TABLE `users` MODIFY `level` TINYINT UNSIGNED NOT NULL DEFAULT 1');
+            DB::statement('ALTER TABLE `approvals` MODIFY `role` TINYINT UNSIGNED NOT NULL');
+        } elseif ($driver === 'pgsql') {
+            DB::statement('ALTER TABLE users ALTER COLUMN level TYPE SMALLINT USING level::integer');
+            DB::statement('ALTER TABLE users ALTER COLUMN level SET NOT NULL');
+            DB::statement('ALTER TABLE users ALTER COLUMN level SET DEFAULT 1');
+            DB::statement('ALTER TABLE approvals ALTER COLUMN role TYPE SMALLINT USING role::integer');
+            DB::statement('ALTER TABLE approvals ALTER COLUMN role SET NOT NULL');
+        }
     }
 
     /**
