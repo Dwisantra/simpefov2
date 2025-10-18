@@ -3,7 +3,13 @@
     <nav class="navbar navbar-expand-lg shadow-sm py-3 navbar-light bg-white sticky-top">
       <div class="container">
         <router-link class="navbar-brand fw-bold text-primary" to="/feature-request">
-          Simpefo Ticketing
+          <!-- Simpefo Ticketing -->
+           <img
+            src="/simpefo-logo.png"
+            alt="SIMPEFO Ticketing Logo"
+            height="65"
+            class="me-2"
+          />
         </router-link>
         <button
           class="navbar-toggler"
