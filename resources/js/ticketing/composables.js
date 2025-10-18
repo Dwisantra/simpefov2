@@ -369,9 +369,14 @@ export function useLoginForm() {
   const showPassword = ref(false)
   const loading = ref(false)
   const error = ref('')
+  const sessionMessage = computed(() => auth.logoutMessage)
 
   const togglePasswordVisibility = () => {
     showPassword.value = !showPassword.value
+  }
+
+  const dismissSessionMessage = () => {
+    auth.clearLogoutMessage()
   }
 
   const submit = async () => {
@@ -402,6 +407,8 @@ export function useLoginForm() {
     showPassword,
     loading,
     error,
+    sessionMessage,
+    dismissSessionMessage,
     togglePasswordVisibility,
     submit
   }

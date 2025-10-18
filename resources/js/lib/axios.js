@@ -7,6 +7,12 @@ const instance = axios.create({
 
 instance.interceptors.request.use(config => {
     const auth = useAuthStore()
+
+    if (Number.isFinite(auth.sessionExpiresAt) && auth.sessionExpiresAt <= Date.now()) {
+        void auth.handleSessionTimeout({ skipRemote: true })
+        return Promise.reject(new Error('Session expired'))
+    }
+
     if (auth.token) {
         config.headers.Authorization = `Bearer ${auth.token}`
     }
@@ -18,7 +24,8 @@ instance.interceptors.response.use(
     (error) => {
         if (error?.response?.status === 401) {
             const auth = useAuthStore()
-            auth.logout()
+            const message = error?.response?.data?.message
+            auth.handleUnauthorized(message)
         }
 
         return Promise.reject(error)

@@ -23,6 +23,19 @@
               <p class="text-muted text-center mb-4">
                 Masuk untuk melanjutkan pengajuan atau persetujuan form.
               </p>
+              <div
+                v-if="sessionMessage"
+                class="alert alert-warning mb-4 d-flex align-items-start justify-content-between gap-3"
+                role="status"
+              >
+                <span>{{ sessionMessage }}</span>
+                <button
+                  type="button"
+                  class="btn-close"
+                  aria-label="Tutup pemberitahuan sesi"
+                  @click="dismissSessionMessage"
+                ></button>
+              </div>
               <form @submit.prevent="submit" novalidate>
                 <div class="mb-3">
                   <label class="form-label">Username</label>
@@ -112,6 +125,16 @@
 <script setup>
 import { useLoginForm } from '@/ticketing/composables'
 
-const { username, password, showPassword, loading, error, togglePasswordVisibility, submit } = useLoginForm()
+const {
+  username,
+  password,
+  showPassword,
+  loading,
+  error,
+  sessionMessage,
+  dismissSessionMessage,
+  togglePasswordVisibility,
+  submit
+} = useLoginForm()
 </script>
 

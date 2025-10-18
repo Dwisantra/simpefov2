@@ -4,6 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="sanctum-idle-timeout" content="{{ config('sanctum.idle_timeout', 15) }}">
 
     <title>{{ config('app.name') }} - Sistem Informasi Manajemen Pengajuan Form</title>
 
