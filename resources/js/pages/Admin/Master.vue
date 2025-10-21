@@ -111,7 +111,7 @@
               <span v-if="loadingUnits" class="text-muted small">Memuat data unit...</span>
             </div>
 
-            <div class="table-responsive rounded-4 border bg-white">
+            <div class="table-responsive-md rounded-4 border bg-white">
               <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                   <tr>
@@ -247,7 +247,7 @@
           {{ userMessage }}
         </div>
 
-        <div class="table-responsive rounded-4 border bg-white">
+        <div class="table-responsive-md rounded-4 border bg-white">
           <table class="table align-middle table-hover mb-0">
             <thead class="table-light">
               <tr>

@@ -50,7 +50,7 @@
             {{ pageSummary }}
           </div>
 
-          <div class="table-responsive rounded-4 border bg-white">
+          <div class="table-responsive-md rounded-4 border bg-white">
             <table class="table align-middle mb-0">
               <thead class="table-light">
                 <tr>
