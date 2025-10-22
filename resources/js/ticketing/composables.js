@@ -35,6 +35,8 @@ const developmentStatusRegistry = Object.freeze({
   4: { label: 'Ready Release', badgeClass: 'bg-success-subtle text-success' }
 })
 
+const DEVELOPMENT_STAGE_PENGERJAAN = 2
+
 const developmentStatusChoices = Object.freeze(
   Object.entries(developmentStatusRegistry).map(([value, meta]) => ({
     value: Number(value),
@@ -1136,6 +1138,8 @@ export function useFeatureRequestDetail() {
   const gitlabSyncing = ref(false)
   const gitlabSuccess = ref('')
   const gitlabError = ref('')
+  const gitlabConfirmModal = ref(null)
+  let gitlabConfirmInstance = null
 
   const userRole = computed(() => Number(auth.user?.level ?? auth.user?.role ?? 0))
   const isAdmin = computed(() => isRole(userRole.value, ROLE.ADMIN))
@@ -1183,8 +1187,10 @@ export function useFeatureRequestDetail() {
       commentDownloadings.value = {}
       commentDownloadErrors.value = {}
       selectedPriority.value = data?.priority ?? 'biasa'
-      selectedDevelopmentStatus.value =
-        data?.development_status ?? (developmentStatusChoices[0]?.value ?? 1)
+      const fetchedDevelopmentStatus = Number(data?.development_status)
+      selectedDevelopmentStatus.value = Number.isFinite(fetchedDevelopmentStatus)
+        ? fetchedDevelopmentStatus
+        : developmentStatusChoices[0]?.value ?? 1
       closeAttachmentViewer()
     } catch (error) {
       feature.value = null
@@ -1194,8 +1200,47 @@ export function useFeatureRequestDetail() {
     }
   }
 
+  const ensureGitlabConfirmInstance = () => {
+    if (gitlabConfirmModal.value && !gitlabConfirmInstance) {
+      gitlabConfirmInstance = new Modal(gitlabConfirmModal.value, {
+        backdrop: 'static',
+        keyboard: false
+      })
+    }
+  }
+
+  const openGitlabConfirmModal = () => {
+    nextTick(() => {
+      ensureGitlabConfirmInstance()
+      gitlabConfirmInstance?.show()
+    })
+  }
+
+  const closeGitlabConfirmModal = () => {
+    gitlabConfirmInstance?.hide()
+  }
+
   onMounted(fetchFeature)
-  onBeforeUnmount(closeAttachmentViewer)
+  onMounted(() => {
+    ensureGitlabConfirmInstance()
+  })
+  onBeforeUnmount(() => {
+    closeAttachmentViewer()
+    if (gitlabConfirmInstance) {
+      gitlabConfirmInstance.hide()
+      if (typeof gitlabConfirmInstance.dispose === 'function') {
+        gitlabConfirmInstance.dispose()
+      }
+    }
+    gitlabConfirmInstance = null
+  })
+
+  watch(
+    () => gitlabConfirmModal.value,
+    () => {
+      ensureGitlabConfirmInstance()
+    }
+  )
 
   watch(showAttachmentViewer, (visible) => {
     if (typeof document === 'undefined') return
@@ -1341,6 +1386,17 @@ export function useFeatureRequestDetail() {
     return formatDateTime(gitlabIssue.value.synced_at)
   })
 
+  const isFullyApproved = computed(() => {
+    const status = feature.value?.status
+    return status === 'approved_b' || status === 'done'
+  })
+
+  const shouldShowGitlabSyncPanel = computed(
+    () => Boolean(gitlabIssue.value?.iid) || isFullyApproved.value
+  )
+
+  const canCreateGitlabIssue = computed(() => !gitlabIssue.value?.iid && isFullyApproved.value)
+
   const priorityOptions = PRIORITY_OPTIONS
 
   const priorityBadgeClass = (priority) => resolvePriorityBadgeClass(priority)
@@ -1355,8 +1411,9 @@ export function useFeatureRequestDetail() {
   watch(
     () => feature.value?.development_status,
     (newStatus) => {
-      if (typeof newStatus === 'number') {
-        selectedDevelopmentStatus.value = newStatus
+      const parsedStatus = Number(newStatus)
+      if (Number.isFinite(parsedStatus)) {
+        selectedDevelopmentStatus.value = parsedStatus
       } else {
         selectedDevelopmentStatus.value = developmentStatusChoices[0]?.value ?? 1
       }
@@ -1875,6 +1932,20 @@ export function useFeatureRequestDetail() {
     )
   }
 
+  const runGitlabSync = async () => {
+    try {
+      gitlabSyncing.value = true
+      const { data } = await axios.post(`/feature-requests/${feature.value.id}/gitlab`)
+      feature.value = data.feature
+      gitlabSuccess.value = data.message ?? 'Sinkronisasi GitLab berhasil.'
+      selectedPriority.value = data.feature?.priority ?? selectedPriority.value
+    } catch (error) {
+      gitlabError.value = error?.response?.data?.message ?? 'Gagal melakukan sinkronisasi GitLab.'
+    } finally {
+      gitlabSyncing.value = false
+    }
+  }
+
   const syncGitlabIssue = async () => {
     gitlabError.value = ''
     gitlabSuccess.value = ''
@@ -1889,17 +1960,36 @@ export function useFeatureRequestDetail() {
       return
     }
 
-    try {
-      gitlabSyncing.value = true
-      const { data } = await axios.post(`/feature-requests/${feature.value.id}/gitlab`)
-      feature.value = data.feature
-      gitlabSuccess.value = data.message ?? 'Sinkronisasi GitLab berhasil.'
-      selectedPriority.value = data.feature?.priority ?? selectedPriority.value
-    } catch (error) {
-      gitlabError.value = error?.response?.data?.message ?? 'Gagal melakukan sinkronisasi GitLab.'
-    } finally {
-      gitlabSyncing.value = false
+    if (!feature.value.gitlab_issue_iid && !canCreateGitlabIssue.value) {
+      gitlabError.value =
+        'Issue GitLab hanya dapat dibuat setelah seluruh stakeholder menyetujui dan ticket memasuki tahap pengerjaan.'
+      return
     }
+
+    if (!feature.value.gitlab_issue_iid) {
+      openGitlabConfirmModal()
+      return
+    }
+
+    await runGitlabSync()
+  }
+
+  const confirmGitlabSync = async () => {
+    if (gitlabSyncing.value) {
+      return
+    }
+
+    if (!feature.value) {
+      closeGitlabConfirmModal()
+      return
+    }
+
+    await runGitlabSync()
+    closeGitlabConfirmModal()
+  }
+
+  const cancelGitlabSync = () => {
+    closeGitlabConfirmModal()
   }
 
   const deleteFeature = async () => {
@@ -2026,7 +2116,12 @@ export function useFeatureRequestDetail() {
     gitlabSyncing,
     gitlabSuccess,
     gitlabError,
+    gitlabConfirmModal,
+    shouldShowGitlabSyncPanel,
+    canCreateGitlabIssue,
     syncGitlabIssue,
+    confirmGitlabSync,
+    cancelGitlabSync,
     formatGitlabState,
   }
 }

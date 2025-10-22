@@ -22,6 +22,36 @@ class FeatureRequestGitlabController extends Controller
             ], 503);
         }
 
+        if ($gitlab->usesBridge() && $featureRequest->gitlab_issue_iid) {
+            $featureRequest->load([
+                'approvals.user:id,name,level',
+                'user:id,name,level,unit_id,instansi',
+                'user.unit:id,name,instansi',
+                'requesterUnit:id,name,instansi,manager_category_id',
+                'comments.user:id,name,level',
+            ])->loadCount('comments');
+
+            return response()->json([
+                'message' => 'Issue GitLab sudah dibuat untuk ticket ini.',
+                'issue' => [
+                    'id' => $featureRequest->gitlab_issue_id,
+                    'iid' => $featureRequest->gitlab_issue_iid,
+                    'url' => $featureRequest->gitlab_issue_url,
+                    'state' => $featureRequest->gitlab_issue_state,
+                    'synced_at' => $featureRequest->gitlab_synced_at,
+                ],
+                'feature' => $featureRequest,
+            ]);
+        }
+
+        if (! $featureRequest->gitlab_issue_iid) {
+            if (! in_array($featureRequest->status, ['approved_b', 'done'], true)) {
+                return response()->json([
+                    'message' => 'Issue GitLab hanya dapat dibuat setelah seluruh stakeholder menyetujui ticket.',
+                ], 422);
+            }
+        }
+
         $data = $request->validate([
             'labels' => ['nullable', 'array'],
             'labels.*' => ['string'],

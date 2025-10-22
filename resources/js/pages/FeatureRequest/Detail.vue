@@ -199,7 +199,10 @@
               Tetapkan prioritas tindak lanjut, tandai progres pengerjaan, dan hapus ticket jika pengajuan dibatalkan.
             </p>
 
-            <div class="gitlab-sync-panel border rounded-4 p-3 mb-4">
+            <div
+              v-if="shouldShowGitlabSyncPanel"
+              class="gitlab-sync-panel border rounded-4 p-3 mb-4"
+            >
               <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
                 <div class="flex-grow-1">
                   <h6 class="fw-semibold mb-1">Sinkronisasi GitLab</h6>
@@ -235,14 +238,18 @@
                     Buka di GitLab
                   </a>
                   <button
+                    v-if="canCreateGitlabIssue"
                     type="button"
                     class="btn btn-primary w-100"
                     :disabled="gitlabSyncing"
                     @click="syncGitlabIssue"
                   >
                     <span v-if="gitlabSyncing" class="spinner-border spinner-border-sm me-2"></span>
-                    {{ gitlabIssue?.iid ? 'Perbarui Issue' : 'Buat Issue GitLab' }}
+                    Buat Issue GitLab
                   </button>
+                  <p v-else class="text-muted small text-end mb-0">
+                    Issue GitLab telah dibuat untuk ticket ini.
+                  </p>
                 </div>
               </div>
             <div v-if="gitlabSuccess" class="alert alert-success py-2 mt-3 mb-0">{{ gitlabSuccess }}</div>
@@ -425,6 +432,52 @@
           </div>
         </div>
       </div>
+      <div
+        ref="gitlabConfirmModal"
+        class="modal fade"
+        tabindex="-1"
+        aria-labelledby="gitlabConfirmModalLabel"
+        aria-hidden="true"
+      >
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-0 pb-0">
+              <h6 class="modal-title fw-semibold" id="gitlabConfirmModalLabel">Buat Issue GitLab</h6>
+              <button
+                type="button"
+                class="btn-close"
+                aria-label="Tutup"
+                :disabled="gitlabSyncing"
+                @click="cancelGitlabSync"
+              ></button>
+            </div>
+            <div class="modal-body pt-3">
+              <p class="mb-0 text-muted small">
+                Yakin ingin membuat issue GitLab untuk ticket ini? Tindakan ini akan mengirim data ticket ke tim pengembang.
+              </p>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+              <button
+                type="button"
+                class="btn btn-outline-secondary"
+                :disabled="gitlabSyncing"
+                @click="cancelGitlabSync"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                class="btn btn-primary"
+                :disabled="gitlabSyncing"
+                @click="confirmGitlabSync"
+              >
+                <span v-if="gitlabSyncing" class="spinner-border spinner-border-sm me-2"></span>
+                Ya, buat issue
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
       <transition name="fade">
         <div
           v-if="showAttachmentViewer"
@@ -533,7 +586,12 @@ const {
   gitlabSyncing,
   gitlabSuccess,
   gitlabError,
+  shouldShowGitlabSyncPanel,
+  canCreateGitlabIssue,
+  gitlabConfirmModal,
   syncGitlabIssue,
+  confirmGitlabSync,
+  cancelGitlabSync,
   formatGitlabState
 } = useFeatureRequestDetail()
 </script>

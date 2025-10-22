@@ -42,6 +42,7 @@ return [
         'labels' => env('GITLAB_ISSUE_LABELS'),
         'webhook_secret' => env('GITLAB_WEBHOOK_SECRET'),
         'default_requester_email' => env('GITLAB_DEFAULT_REQUESTER_EMAIL'),
+        'bridge_url' => env('GITLAB_BRIDGE_URL'),
     ],
 
 ];

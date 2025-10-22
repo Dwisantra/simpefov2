@@ -15,11 +15,16 @@ class FeatureRequest extends Model
 
     public $incrementing = false;
 
+    public const DEVELOPMENT_STATUS_ANALYSIS = 1;
+    public const DEVELOPMENT_STATUS_PENGERJAAN = 2;
+    public const DEVELOPMENT_STATUS_TESTING = 3;
+    public const DEVELOPMENT_STATUS_READY_RELEASE = 4;
+
     public const DEVELOPMENT_STATUS_LABELS = [
-        1 => 'Analisis',
-        2 => 'Pengerjaan',
-        3 => 'Testing',
-        4 => 'Ready Release',
+        self::DEVELOPMENT_STATUS_ANALYSIS => 'Analisis',
+        self::DEVELOPMENT_STATUS_PENGERJAAN => 'Pengerjaan',
+        self::DEVELOPMENT_STATUS_TESTING => 'Testing',
+        self::DEVELOPMENT_STATUS_READY_RELEASE => 'Ready Release',
     ];
 
     protected $fillable = [
