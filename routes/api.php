@@ -40,6 +40,7 @@ Route::middleware(['auth:sanctum', 'sanctum.timeout'])->group(function () {
     Route::put('/admin/users/{user}', [UserManagementController::class, 'update']);
     Route::get('/feature-requests', [FeatureRequestController::class, 'index']);
     Route::get('/feature-requests/monitoring', [FeatureRequestController::class, 'monitoring']);
+    Route::get('/feature-requests/monitoring/export', [FeatureRequestController::class, 'exportMonitoring']);
     Route::post('/feature-requests', [FeatureRequestController::class, 'store'])
         ->middleware('ensure-requester');
     Route::get('/feature-requests/{featureRequest}', [FeatureRequestController::class, 'show']);

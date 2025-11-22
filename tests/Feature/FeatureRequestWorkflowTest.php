@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\Sanctum;
+use ZipArchive;
 use Tests\TestCase;
 
 class FeatureRequestWorkflowTest extends TestCase
@@ -363,5 +364,70 @@ class FeatureRequestWorkflowTest extends TestCase
 
         $this->assertTrue($ids->contains($inProgress->id));
         $this->assertCount(1, $ids);
+    }
+
+    public function test_admin_can_update_release_information(): void
+    {
+        $unit = $this->createUnitWithCategory(ManagerCategory::YANMED->value, 'wiradadi');
+        $requester = $this->createUserForUnit($unit);
+        $admin = User::factory()->create(['level' => UserRole::ADMIN->value]);
+
+        $ticket = $this->createFeatureRequest($requester, 'approved_b', [
+            'development_status' => 4,
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $payload = [
+            'release_status' => 2,
+            'release_date' => now()->toDateString(),
+        ];
+
+        $response = $this->putJson("/api/feature-requests/{$ticket->id}", $payload);
+
+        $response->assertOk();
+        $response->assertJsonFragment([
+            'release_status' => 2,
+        ]);
+
+        $ticket->refresh();
+
+        $this->assertEquals(2, $ticket->release_status);
+        $this->assertNotNull($ticket->release_date);
+        $this->assertEquals($admin->id, $ticket->release_set_by);
+    }
+
+    public function test_monitoring_export_requires_admin_and_returns_xlsx(): void
+    {
+        $unit = $this->createUnitWithCategory(ManagerCategory::YANMED->value, 'wiradadi');
+        $requester = $this->createUserForUnit($unit);
+        $admin = User::factory()->create(['level' => UserRole::ADMIN->value]);
+
+        $this->createFeatureRequest($requester, 'approved_b', [
+            'development_status' => 4,
+            'release_status' => 1,
+            'release_date' => now()->toDateString(),
+        ]);
+
+        Sanctum::actingAs($requester);
+        $this->getJson('/api/feature-requests/monitoring/export')->assertForbidden();
+
+        Sanctum::actingAs($admin);
+        $response = $this->get('/api/feature-requests/monitoring/export');
+
+        $response->assertOk();
+        $response->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        $temp = tempnam(sys_get_temp_dir(), 'xlsx');
+        file_put_contents($temp, $response->streamedContent());
+
+        $zip = new \ZipArchive();
+        $zip->open($temp);
+        $sheet = $zip->getFromName('xl/worksheets/sheet1.xml');
+        $zip->close();
+        @unlink($temp);
+
+        $this->assertStringContainsString('Pengujian stage', $sheet);
+        $this->assertStringContainsString('Sudah release', $sheet);
     }
 }

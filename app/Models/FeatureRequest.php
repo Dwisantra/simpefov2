@@ -33,6 +33,9 @@ class FeatureRequest extends Model
         'description',
         'status',
         'development_status',
+        'release_date',
+        'release_status',
+        'release_set_by',
         'priority',
         'request_types',
         'requester_unit_id',
@@ -70,6 +73,8 @@ class FeatureRequest extends Model
         'development_status' => 'integer',
         'manager_category_id' => 'integer',
         'requester_unit_id' => 'integer',
+        'release_status' => 'integer',
+        'release_date' => 'date',
     ];
 
     public function approvals()
@@ -90,6 +95,11 @@ class FeatureRequest extends Model
     public function requesterUnit()
     {
         return $this->belongsTo(Unit::class, 'requester_unit_id');
+    }
+
+    public function releaseSetter()
+    {
+        return $this->belongsTo(User::class, 'release_set_by');
     }
 
     public function getRouteKeyName(): string

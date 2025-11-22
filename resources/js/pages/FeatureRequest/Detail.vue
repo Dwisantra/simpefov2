@@ -302,6 +302,68 @@
             <div v-if="developmentStatusError" class="alert alert-danger py-2 mt-3 mb-0">{{ developmentStatusError }}</div>
           </div>
 
+          <div class="release-panel border rounded-4 p-3 mb-4">
+            <div class="col-md d-flex flex-wrap justify-content-between align-items-start gap-3">
+              <div>
+                <h6 class="fw-semibold mb-1">Informasi Release</h6>
+                <p class="text-muted small mb-1">
+                  Atur tanggal release serta status pemakaian siap digunakan.
+                </p>
+              </div>
+            </div>
+
+            <div class="text-start row-md-4 mt-2">
+              <span class="badge bg-secondary-subtle text-secondary px-3 py-2" :class="releaseStatusBadgeClass(selectedReleaseStatus)">
+                {{ releaseStatusLabel(selectedReleaseStatus) }}
+              </span>
+              
+              <div class="d-flex justify-content-between text-muted small mt-2">
+                <span>Tanggal release: {{ formatDateOnly(releaseDate) || '-' }} [ {{ feature.release_setter?.name || '-' }} ]</span>
+              </div>
+            </div>
+
+            <div class="row g-3 align-items-end mt-1">
+              <div class="col-md-6">
+                <label class="form-label small fw-semibold" for="release-status-select">Status release</label>
+                <select
+                  id="release-status-select"
+                  v-model.number="selectedReleaseStatus"
+                  class="form-select"
+                  :disabled="releaseSaving"
+                >
+                  <option :value=0>Pilih status release</option>
+                  <option v-for="option in releaseStatusOptions" :key="option.value" :value="option.value">
+                    {{ option.label }}
+                  </option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-semibold" for="release-date-input">Tanggal release</label>
+                <input
+                  id="release-date-input"
+                  v-model="releaseDate"
+                  type="date"
+                  class="form-control"
+                  :disabled="releaseSaving"
+                />
+              </div>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 mt-3">
+              <button
+                type="button"
+                class="btn btn-outline-primary"
+                :disabled="releaseSaving || deleteLoading"
+                @click="updateReleaseInfo"
+              >
+                <span v-if="releaseSaving" class="spinner-border spinner-border-sm me-2"></span>
+                Simpan
+              </button>
+              <span v-if="releaseSuccess" class="text-success small fw-semibold">{{ releaseSuccess }}</span>
+              <span v-if="releaseError" class="text-danger small fw-semibold">{{ releaseError }}</span>
+            </div>
+          </div>
+
           <div v-if="prioritySuccess" class="alert alert-success py-2">{{ prioritySuccess }}</div>
           <div v-if="priorityError" class="alert alert-danger py-2">{{ priorityError }}</div>
           <div v-if="deleteError" class="alert alert-danger py-2">{{ deleteError }}</div>
@@ -548,6 +610,9 @@ const {
   approvalHint,
   roleText,
   formatDate,
+  formatDateOnly,
+  releaseStatusLabel,
+  releaseStatusBadgeClass,
   approve,
   priorityOptions,
   selectedPriority,
@@ -556,6 +621,13 @@ const {
   priorityError,
   priorityBadgeClass,
   updatePriority,
+  releaseStatusOptions,
+  selectedReleaseStatus,
+  releaseDate,
+  releaseSaving,
+  releaseSuccess,
+  releaseError,
+  updateReleaseInfo,
   developmentStatusOptions,
   selectedDevelopmentStatus,
   developmentStatusSaving,

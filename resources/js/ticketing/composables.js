@@ -55,6 +55,18 @@ const instansiNameMap = Object.freeze({
   raffa: 'RS Raffa Majenang'
 })
 
+const releaseStatusRegistry = Object.freeze({
+  1: { label: 'Sudah release (belum dipakai)', badgeClass: 'bg-info-subtle text-info' },
+  2: { label: 'Sudah release dan dipakai', badgeClass: 'bg-success-subtle text-success' }
+})
+
+const releaseStatusChoices = Object.freeze(
+  Object.entries(releaseStatusRegistry).map(([value, meta]) => ({
+    value: Number(value),
+    label: meta.label
+  }))
+)
+
 const formatInstansiLabel = (value) => instansiNameMap[value] ?? value ?? '-'
 
 const baseApprovalSteps = 4
@@ -73,19 +85,19 @@ const approvalProgressFromStatus = (item) => {
 
   const map = requiresDirectorA
     ? {
-        pending: 1,
-        approved_manager: 2,
-        approved_a: 3,
-        approved_b: 4,
-        done: 4
-      }
+      pending: 1,
+      approved_manager: 2,
+      approved_a: 3,
+      approved_b: 4,
+      done: 4
+    }
     : {
-        pending: 1,
-        approved_manager: 2,
-        approved_a: 2,
-        approved_b: 3,
-        done: 3
-      }
+      pending: 1,
+      approved_manager: 2,
+      approved_a: 2,
+      approved_b: 3,
+      done: 3
+    }
 
   return map[status] ?? 0
 }
@@ -208,6 +220,30 @@ const formatDateTime = (date) => {
     hour: '2-digit',
     minute: '2-digit'
   })
+}
+
+const formatDateOnly = (date) => {
+  if (!date) return '-'
+  return new Date(date).toLocaleString('id-ID', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+const toDateInputValue = (value) => {
+  if (!value) return ''
+
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) {
+    return ''
+  }
+
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
 }
 
 export function useAppShell() {
@@ -722,6 +758,7 @@ export function useFeatureRequestIndex() {
     stageDescription,
     setStage,
     formatDate: formatDateTime,
+    formatDateOnly,
     instansiLabel,
     canCreate,
     isAdmin
@@ -729,6 +766,7 @@ export function useFeatureRequestIndex() {
 }
 
 export function useTicketMonitoring() {
+  const auth = useAuthStore()
   const loading = ref(false)
   const perPage = ref(10)
   const activeTab = ref('pengerjaan')
@@ -745,18 +783,17 @@ export function useTicketMonitoring() {
   const tickets = computed(() => pagination.value.data ?? [])
 
   const tabOptions = [
-    { value: 'pengerjaan', label: 'Sedang Dikerjakan' },
+    { value: 'pengerjaan', label: 'Pengerjaan' },
     { value: 'selesai', label: 'Selesai' }
   ]
 
   const tabCopy = {
-    pengerjaan:
-      'Pantau progres analisis, pengerjaan, testing, hingga siap rilis untuk ticket yang sedang ditangani tim IT.',
+    pengerjaan: 'Pantau progres ticket yang sedang dikerjakan tim IT.',
     selesai: 'Lihat ticket yang sudah selesai dikerjakan dan siap digunakan unit terkait.'
   }
 
   const emptyCopy = {
-    pengerjaan: 'Belum ada ticket yang sedang dikerjakan oleh tim IT saat ini.',
+    pengerjaan: 'Belum ada ticket dalam pengerjaan pada periode ini.',
     selesai: 'Belum ada ticket selesai pada periode ini.'
   }
 
@@ -859,6 +896,30 @@ export function useTicketMonitoring() {
     loadTickets(1)
   })
 
+  const releaseStatusLabel = (status) => releaseStatusRegistry[Number(status)]?.label ?? 'Belum diatur'
+  const releaseStatusBadgeClass = (status) => releaseStatusRegistry[Number(status)]?.badgeClass ?? 'bg-secondary-subtle text-secondary'
+
+  const exportMonitoring = async () => {
+    const response = await axios.get('/feature-requests/monitoring/export', {
+      params: { tab: activeTab.value },
+      responseType: 'blob'
+    })
+
+    const blob = new Blob([response.data], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', 'monitoring-ticket.xlsx')
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+  }
+
+  const isAdmin = computed(() => isRole(Number(auth.user?.level ?? auth.user?.role ?? 0), ROLE.ADMIN))
+
   const statusLabel = (value) => describeTicketStatus(value)
   const statusBadgeClass = (status) => statusBadgeClassFor(status)
   const priorityBadgeClass = (priority) => priorityBadgeClassFor(priority)
@@ -910,7 +971,12 @@ export function useTicketMonitoring() {
     previousPage,
     loadTickets,
     formatDate: formatDateTime,
-    instansiLabel
+    formatDateOnly,
+    instansiLabel,
+    releaseStatusLabel,
+    releaseStatusBadgeClass,
+    exportMonitoring,
+    isAdmin
   }
 }
 
@@ -1126,6 +1192,11 @@ export function useFeatureRequestDetail() {
   const prioritySaving = ref(false)
   const prioritySuccess = ref('')
   const priorityError = ref('')
+  const selectedReleaseStatus = ref(null)
+  const releaseDate = ref('')
+  const releaseSaving = ref(false)
+  const releaseSuccess = ref('')
+  const releaseError = ref('')
   const selectedDevelopmentStatus = ref(developmentStatusChoices[0]?.value ?? 1)
   const developmentStatusSaving = ref(false)
   const developmentStatusSuccess = ref('')
@@ -1150,6 +1221,7 @@ export function useFeatureRequestDetail() {
     gitlab_issue: 'Issue dari GitLab',
   }
   const developmentStatusOptions = developmentStatusChoices
+  const releaseStatusOptions = releaseStatusChoices
 
   const openAttachmentViewer = () => {
     attachmentViewerOpen.value = true
@@ -1191,6 +1263,11 @@ export function useFeatureRequestDetail() {
       selectedDevelopmentStatus.value = Number.isFinite(fetchedDevelopmentStatus)
         ? fetchedDevelopmentStatus
         : developmentStatusChoices[0]?.value ?? 1
+      const fetchedReleaseStatus = Number(data?.release_status)
+      selectedReleaseStatus.value = Number.isFinite(fetchedReleaseStatus)
+        ? fetchedReleaseStatus
+        : null
+      releaseDate.value = toDateInputValue(data?.release_date) ?? ''
       closeAttachmentViewer()
     } catch (error) {
       feature.value = null
@@ -1420,21 +1497,36 @@ export function useFeatureRequestDetail() {
     }
   )
 
+  watch(
+    () => feature.value?.release_status,
+    (newStatus) => {
+      const parsedStatus = Number(newStatus)
+      selectedReleaseStatus.value = Number.isFinite(parsedStatus) ? parsedStatus : null
+    }
+  )
+
+  watch(
+    () => feature.value?.release_date,
+    (newDate) => {
+      releaseDate.value = toDateInputValue(newDate)
+    }
+  )
+
   const currentStageRole = computed(() => {
     const status = feature.value?.status
     const requiresDirectorA = feature.value?.requires_director_a_approval !== false
 
     const map = requiresDirectorA
       ? {
-          pending: ROLE.MANAGER,
-          approved_manager: ROLE.DIRECTOR_A,
-          approved_a: ROLE.DIRECTOR_B
-        }
+        pending: ROLE.MANAGER,
+        approved_manager: ROLE.DIRECTOR_A,
+        approved_a: ROLE.DIRECTOR_B
+      }
       : {
-          pending: ROLE.MANAGER,
-          approved_manager: ROLE.DIRECTOR_B,
-          approved_a: ROLE.DIRECTOR_B
-        }
+        pending: ROLE.MANAGER,
+        approved_manager: ROLE.DIRECTOR_B,
+        approved_a: ROLE.DIRECTOR_B
+      }
 
     return map[status] ?? null
   })
@@ -1859,6 +1951,42 @@ export function useFeatureRequestDetail() {
     }
   }
 
+  const updateReleaseInfo = async () => {
+    releaseError.value = ''
+    releaseSuccess.value = ''
+
+    if (!isAdmin.value) {
+      releaseError.value = 'Hanya admin yang dapat memperbarui data release.'
+      return
+    }
+
+    if (!feature.value) {
+      releaseError.value = 'Data ticket tidak ditemukan.'
+      return
+    }
+
+    try {
+      releaseSaving.value = true
+      const payload = {}
+
+      if (selectedReleaseStatus.value !== null && selectedReleaseStatus.value !== undefined) {
+        payload.release_status = selectedReleaseStatus.value
+      }
+
+      if (releaseDate.value || releaseDate.value === '') {
+        payload.release_date = releaseDate.value || null
+      }
+
+      const { data } = await axios.put(`/feature-requests/${feature.value.id}`, payload)
+      feature.value = data
+      releaseSuccess.value = 'Data release berhasil diperbarui.'
+    } catch (error) {
+      releaseError.value = error?.response?.data?.message ?? 'Gagal memperbarui data release.'
+    } finally {
+      releaseSaving.value = false
+    }
+  }
+
   const updateDevelopmentStatus = async () => {
     developmentStatusError.value = ''
     developmentStatusSuccess.value = ''
@@ -2052,6 +2180,9 @@ export function useFeatureRequestDetail() {
     }
   }
 
+  const releaseStatusLabel = (status) => releaseStatusRegistry[Number(status)]?.label ?? 'Belum diatur'
+  const releaseStatusBadgeClass = (status) => releaseStatusRegistry[Number(status)]?.badgeClass ?? 'bg-secondary-subtle text-secondary'
+
   return {
     feature,
     loading,
@@ -2071,6 +2202,9 @@ export function useFeatureRequestDetail() {
     approvalHint,
     roleText,
     formatDate: formatDateTime,
+    formatDateOnly,
+    releaseStatusLabel,
+    releaseStatusBadgeClass,
     approve,
     priorityOptions,
     selectedPriority,
@@ -2079,6 +2213,13 @@ export function useFeatureRequestDetail() {
     priorityError,
     priorityBadgeClass,
     updatePriority,
+    releaseStatusOptions,
+    selectedReleaseStatus,
+    releaseDate,
+    releaseSaving,
+    releaseSuccess,
+    releaseError,
+    updateReleaseInfo,
     developmentStatusOptions,
     selectedDevelopmentStatus,
     developmentStatusSaving,
