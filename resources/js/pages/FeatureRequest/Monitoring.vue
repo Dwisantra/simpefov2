@@ -24,6 +24,29 @@
       </div>
 
       <div class="ms-auto d-flex align-items-center gap-2 flex-wrap">
+        <div
+          v-if="activeTab === 'pengerjaan'"
+          class="d-flex align-items-center gap-2 development-filter"
+        >
+          <label class="form-label mb-0 text-muted small fw-semibold" for="development-status">
+            Status pengerjaan
+          </label>
+          <select
+            id="development-status"
+            v-model="developmentStatusFilter"
+            class="form-select form-select-sm"
+          >
+            <option value="">Semua</option>
+            <option
+              v-for="option in developmentStatusOptions"
+              :key="`development-${option.value}`"
+              :value="option.value"
+            >
+              {{ option.label }}
+            </option>
+          </select>
+        </div>
+        
         <div class="d-flex align-items-center gap-2 pagination-size-control">
           <label class="form-label mb-0 text-muted small fw-semibold" for="monitoring-per-page">
             Per halaman
@@ -247,6 +270,8 @@ const {
   releaseStatusBadgeClass,
   instansiLabel,
   exportMonitoring,
+  developmentStatusOptions,
+  developmentStatusFilter,
   isAdmin
 } = useTicketMonitoring()
 </script>

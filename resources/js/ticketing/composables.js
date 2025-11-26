@@ -770,6 +770,7 @@ export function useTicketMonitoring() {
   const loading = ref(false)
   const perPage = ref(10)
   const activeTab = ref('pengerjaan')
+  const developmentStatusFilter = ref('')
   const pagination = ref({
     data: [],
     current_page: 1,
@@ -803,12 +804,22 @@ export function useTicketMonitoring() {
   const loadTickets = async (page = 1) => {
     loading.value = true
     try {
-      const { data } = await axios.get('/feature-requests/monitoring', {
-        params: {
-          page,
-          per_page: perPage.value,
-          tab: activeTab.value
+      const params = {
+        page,
+        per_page: perPage.value,
+        tab: activeTab.value
+      }
+
+      if (activeTab.value === 'pengerjaan') {
+        const selectedStatus = developmentStatusFilter.value
+        const parsedStatus = Number(selectedStatus)
+        if (selectedStatus !== '' && Number.isFinite(parsedStatus)) {
+          params.development_status = parsedStatus
         }
+      }
+
+      const { data } = await axios.get('/feature-requests/monitoring', {
+        params
       })
 
       pagination.value = {
@@ -893,7 +904,14 @@ export function useTicketMonitoring() {
   )
 
   watch(activeTab, () => {
+    developmentStatusFilter.value = ''
     loadTickets(1)
+  })
+
+  watch(developmentStatusFilter, () => {
+    if (activeTab.value === 'pengerjaan') {
+      loadTickets(1)
+    }
   })
 
   const releaseStatusLabel = (status) => releaseStatusRegistry[Number(status)]?.label ?? 'Belum diatur'
@@ -976,6 +994,8 @@ export function useTicketMonitoring() {
     releaseStatusLabel,
     releaseStatusBadgeClass,
     exportMonitoring,
+    developmentStatusOptions: developmentStatusChoices,
+    developmentStatusFilter,
     isAdmin
   }
 }

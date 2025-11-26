@@ -91,7 +91,12 @@ class FeatureRequestController extends Controller
             $tab = 'pengerjaan';
         }
 
-        $query = $this->buildMonitoringQuery($tab);
+        $developmentStatus = $request->integer('development_status');
+        if (! in_array($developmentStatus, [1, 2, 3, 4], true)) {
+            $developmentStatus = null;
+        }
+
+        $query = $this->buildMonitoringQuery($tab, $developmentStatus);
 
         $perPage = max(1, min((int) $request->input('per_page', 10), 50));
 
@@ -329,7 +334,7 @@ class FeatureRequestController extends Controller
         ])->loadCount('comments');
     }
 
-    private function buildMonitoringQuery(string $tab)
+    private function buildMonitoringQuery(string $tab, ?int $developmentStatusFilter = null)
     {
         $query = FeatureRequest::with([
             'user:id,name,level,unit_id,instansi',
@@ -363,6 +368,10 @@ class FeatureRequestController extends Controller
                             ->orWhere('development_status', '<', 4);
                     });
             });
+
+            if ($developmentStatusFilter !== null) {
+                $query->where('development_status', $developmentStatusFilter);
+            }
         }
 
         return $query;
