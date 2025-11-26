@@ -74,7 +74,8 @@ class FeatureRequestController extends Controller
         if ($stage === 'submission') {
             $query->whereIn('status', ['pending', 'approved_manager', 'approved_a']);
         } elseif ($stage === 'development') {
-            $query->whereIn('status', ['approved_b', 'done']);
+            $query->whereIn('status', ['approved_b', 'done'])
+                ->where('development_status', '!=', 4);
         }
 
         $perPage = max(1, min((int) $request->input('per_page', 10), 50));
