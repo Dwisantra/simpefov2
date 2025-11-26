@@ -343,10 +343,12 @@ class FeatureRequestController extends Controller
         if ($tab === 'selesai') {
             $query->where(function ($builder) {
                 $builder
-                    ->where('status', 'done')
+                    ->where(function ($q) {
+                        $q->where('status', 'done')
+                            ->where('release_status', '!=', 0);
+                    })
                     ->orWhere(function ($inner) {
                         $inner
-                            ->where('status', 'approved_b')
                             ->whereNotNull('development_status')
                             ->where('development_status', '>=', 4);
                     });
