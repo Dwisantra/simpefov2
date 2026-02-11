@@ -81,7 +81,7 @@
                   <header class="ticket-card-header">
                     <div class="ticket-title">
                       <h4 class="fw-semibold mb-1">{{ item.request_types_label }}</h4>
-                      <p class="text-muted mb-0">
+                      <p class="text-muted mb-0 text-truncate-3">
                         {{ item.description || 'Tidak ada deskripsi tambahan.' }}
                       </p>
                     </div>
