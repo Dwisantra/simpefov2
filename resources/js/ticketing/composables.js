@@ -1493,6 +1493,15 @@ export function useFeatureRequestDetail() {
     return formatDateTime(gitlabIssue.value.synced_at)
   })
 
+  const formatDescription = (text) => {
+    if (!text) return ''
+
+    return text
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\n/g, "<br>")
+  }
+
   const isFullyApproved = computed(() => {
     const status = feature.value?.status
     return status === 'approved_b' || status === 'done'
@@ -2232,6 +2241,7 @@ export function useFeatureRequestDetail() {
     approvalHint,
     roleText,
     formatDate: formatDateTime,
+    formatDescription,
     formatDateOnly,
     releaseStatusLabel,
     releaseStatusBadgeClass,

@@ -27,9 +27,10 @@
                   </span>
                 </div>
 
-                <p class="text-muted mb-3">
-                  {{ feature.description || 'Tidak ada deskripsi tambahan.' }}
-                </p>
+                <p
+                  class="text-muted mb-3 description-text"
+                  v-html="formatDescription(feature.description) || 'Tidak ada deskripsi tambahan.'"
+                ></p>
 
                 <div class="text-muted small mb-3">
                   <span class="d-inline-flex align-items-center gap-2 me-3">
@@ -610,6 +611,7 @@ const {
   approvalHint,
   roleText,
   formatDate,
+  formatDescription,
   formatDateOnly,
   releaseStatusLabel,
   releaseStatusBadgeClass,
