@@ -74,35 +74,53 @@
 
       <div v-else class="row g-4 row-cols-1 row-cols-xl-2">
         <div v-for="item in requests" :key="item.id" class="col">
-          <div class="card ticket-card border-0 shadow-sm h-100">
+          <div class="card ticket-card border-0 shadow-sm">
             <div class="card-body p-4">
               <div class="ticket-card-layout">
                 <div class="ticket-card-main">
-                  <header class="ticket-card-header">
-                    <div class="ticket-title">
-                      <h4 class="fw-semibold mb-1">{{ item.request_types_label }}</h4>
-                      <p class="text-muted mb-0 text-truncate-3">
-                        {{ item.description || 'Tidak ada deskripsi tambahan.' }}
-                      </p>
-                    </div>
-                    <div class="ticket-status-stack">
-                      <span class="badge rounded-pill" :class="statusBadgeClass(item.status)">
-                        {{ statusLabel(item) }}
-                      </span>
-                      <span
-                        v-if="item.development_status_label"
-                        class="badge rounded-pill dev-status-chip"
-                        :class="developmentStatusBadgeClass(item.development_status)"
-                      >
-                        {{ item.development_status_label }}
-                      </span>
-                      <span class="badge rounded-pill priority-chip" :class="priorityBadgeClass(item.priority)">
-                        {{ item.priority_label }}
-                      </span>
+                  <header class="ticket-card-header d-flex justify-content-between align-items-start gap-3">
+                    <div class="ticket-title flex-grow-1">
+                      <h4 class="fw-semibold mb-1">{{ item.request_types_label }}</h4>                      
+                      <div class="description-wrapper">
+                        <div
+                          class="description-content"
+                          v-html="
+                            isExpanded(item.id)
+                              ? formatDescription(item.description)
+                              : formatDescription(truncateText(item.description, DESCRIPTION_LIMIT))
+                          "
+                        ></div>
+
+                        <button
+                          v-if="(item.description?.length ?? 0) > DESCRIPTION_LIMIT"
+                          @click="toggleExpand(item.id)"
+                          class="btn btn-link btn-sm p-0 text-decoration-none fw-medium"
+                        >
+                          {{ isExpanded(item.id) ? 'Sembunyikan' : 'Baca Selengkapnya' }}
+                        </button>
+                      </div>
                     </div>
                   </header>
 
-                  <div class="ticket-flags d-flex flex-wrap gap-2 mt-3 mt-lg-4">
+                  <div class="ticket-status-stack d-flex flex-row flex-wrap gap-2 justify-content-end align-items-start">
+                    <span class="badge rounded-pill" :class="statusBadgeClass(item.status)">
+                      {{ statusLabel(item) }}
+                    </span>
+
+                    <span
+                      v-if="item.development_status_label"
+                      class="badge rounded-pill dev-status-chip"
+                      :class="developmentStatusBadgeClass(item.development_status)"
+                    >
+                      {{ item.development_status_label }}
+                    </span>
+
+                    <span class="badge rounded-pill priority-chip" :class="priorityBadgeClass(item.priority)">
+                      {{ item.priority_label }}
+                    </span>
+                  </div>
+
+                  <div class="ticket-flags d-flex flex-wrap">
                     <span
                       v-if="item.attachment_url"
                       class="badge bg-info-subtle text-info d-inline-flex align-items-center gap-2"
@@ -216,6 +234,25 @@
 import { computed } from 'vue'
 import { useFeatureRequestIndex } from '@/ticketing/composables'
 import { ROLE, ROLE_LABELS } from '@/constants/roles'
+import { ref } from 'vue'
+
+const DESCRIPTION_LIMIT = 150
+const expandTickets = ref([])
+const truncateText = (text, length = DESCRIPTION_LIMIT) => {
+  if (!text) return ''
+  return text.length > length ? text.substring(0, length) + '...' : text
+}
+
+const toggleExpand = (id) => {
+  const index = expandTickets.value.indexOf(id)
+  if (index > -1) {
+    expandTickets.value.splice(index, 1)
+  } else {
+    expandTickets.value.push(id)
+  }
+}
+
+const isExpanded = (id) => expandTickets.value.includes(id)
 
 const stageDefinitions = (item = null) => {
   const requiresDirectorA = item?.requires_director_a_approval !== false
@@ -246,6 +283,7 @@ const {
   progressPercentage,
   progressSteps,
   formatDate,
+  formatDescription,
   instansiLabel,
   canCreate,
   isAdmin,

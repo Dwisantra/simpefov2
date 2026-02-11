@@ -222,6 +222,15 @@ const formatDateTime = (date) => {
   })
 }
 
+const formatDescription = (text) => {
+  if (!text) return ''
+
+  return text
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\n/g, "<br>")
+}
+
 const formatDateOnly = (date) => {
   if (!date) return '-'
   return new Date(date).toLocaleString('id-ID', {
@@ -758,6 +767,7 @@ export function useFeatureRequestIndex() {
     stageDescription,
     setStage,
     formatDate: formatDateTime,
+    formatDescription,
     formatDateOnly,
     instansiLabel,
     canCreate,
