@@ -7,6 +7,7 @@ enum ManagerCategory: int
     case YANMUM = 1;
     case YANMED = 2;
     case JANGMED = 3;
+    case KMKB = 4;
 
     public function label(): string
     {
@@ -14,6 +15,7 @@ enum ManagerCategory: int
             self::YANMUM => 'Manager Yanmum',
             self::YANMED => 'Manager Yanmed',
             self::JANGMED => 'Manager Jangmed',
+            self::KMKB => 'Ketua Tim KMKB',
         };
     }
 
@@ -33,6 +35,7 @@ enum ManagerCategory: int
             'yanmum' => self::YANMUM,
             'yanmed' => self::YANMED,
             'jangmed' => self::JANGMED,
+            'kmkb' => self::KMKB,
             default => null,
         };
     }
