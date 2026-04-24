@@ -20,6 +20,7 @@ class FeatureRequestController extends Controller
             'user:id,name,level,unit_id,instansi',
             'user.unit:id,name,instansi',
             'requesterUnit:id,name,instansi,manager_category_id',
+            'validationTokens',
         ])
             ->withCount('comments')
             ->orderBy('created_at', 'desc');
@@ -163,6 +164,8 @@ class FeatureRequestController extends Controller
         ]);
 
         $user = $request->user();
+        
+        $validationService = app(\App\Services\ApprovalValidationService::class);
 
         if (! $user->is_verified) {
             return response()->json([
@@ -245,7 +248,21 @@ class FeatureRequestController extends Controller
             'requesterUnit:id,name,instansi,manager_category_id',
         ])->loadCount('comments');
 
-        return response()->json($feature, 201);
+        $validationLink = null;
+        try {
+            $approval = $feature->approvals()->first();
+            if ($approval) {
+                $validationLink = $validationService->generateValidationLink($approval, $feature);
+            }
+        } catch (\Exception $e) {
+            // Silently fail - the ticket is already created
+            \Log::error('Failed to generate validation link: ' . $e->getMessage());
+        }
+
+        $response = $feature->toArray();
+        $response['validation_link'] = $validationLink;
+
+        return response()->json($response, 201);
     }
 
     public function show(Request $request, FeatureRequest $featureRequest)

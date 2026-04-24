@@ -4,11 +4,19 @@ namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
 use App\Models\FeatureRequest;
+use App\Services\ApprovalValidationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
 class ApprovalController extends Controller
 {
+    protected ApprovalValidationService $validationService;
+
+    public function __construct(ApprovalValidationService $validationService)
+    {
+        $this->validationService = $validationService;
+    }
+    
     public function approve(Request $request, FeatureRequest $featureRequest)
     {
         $data = $request->validate([
@@ -118,9 +126,27 @@ class ApprovalController extends Controller
             'comments.user:id,name,level'
         ])->loadCount('comments');
 
+        // Get the approval that was just created
+        $latestApproval = $featureRequest->approvals()
+            ->where('user_id', $user->id)
+            ->where('role', $role->value)
+            ->latest()
+            ->first();
+
+        // Generate validation link if approval was created
+        $validationLink = null;
+        if ($latestApproval) {
+            try {
+                $validationLink = $this->validationService->generateValidationLink($latestApproval, $featureRequest);
+            } catch (\Exception $e) {
+                \Log::warning('Failed to generate validation link: ' . $e->getMessage());
+            }
+        }
+
         return response()->json([
             'message' => 'Persetujuan berhasil dicatat.',
             'feature' => $featureRequest,
+            'validation_link' => $validationLink,
         ]);
     }
 }

@@ -2,6 +2,8 @@ import { ref, reactive, computed, onMounted, onBeforeUnmount, watch, nextTick } 
 import { Modal } from 'bootstrap'
 import { useRouter, useRoute } from 'vue-router'
 import axios from '@/lib/axios'
+import { useToast } from 'primevue/usetoast'
+import Swal from 'sweetalert2'
 import { useAuthStore } from '@/stores/auth'
 import { ROLE, ROLE_LABELS, ROLE_OPTIONS, isRole } from '@/constants/roles'
 import { MANAGER_CATEGORY, MANAGER_CATEGORY_OPTIONS } from '@/constants/managerCategories'
@@ -597,6 +599,7 @@ export function useRegisterForm() {
 
 export function useFeatureRequestIndex() {
   const auth = useAuthStore()
+  const toast = useToast()
   const loading = ref(false)
   const perPage = ref(10)
   const stage = ref('submission')
@@ -742,6 +745,67 @@ export function useFeatureRequestIndex() {
     }
   }
 
+  const regeneratingLinks = ref({})
+  const showRegenerateModal = ref(false)
+  const regeneratedLinkData = ref({
+    link: '',
+    expiresAt: null
+  })
+
+  const regenerateValidationLink = async (featureRequestId) => {
+    const result = await Swal.fire({
+        title: 'Regenerate Link?',
+        text: "Link lama akan menjadi tidak berlaku lagi.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Ya, Buat Baru!',
+        cancelButtonText: 'Batal'
+    })
+
+    if (!result.isConfirmed) return
+    
+    regeneratingLinks.value[featureRequestId] = true
+
+    try {
+        const response = await axios.post(`/feature-requests/${featureRequestId}/validation-link`)
+        const newLink = response.data.link || response.data.validation_link_info
+        const newExpiresAt = response.data.expires_at
+
+        const itemIndex = pagination.value.data.findIndex(r => r.id === featureRequestId)
+
+        if (itemIndex !== -1 && newLink) {
+            pagination.value.data[itemIndex] = {
+                ...pagination.value.data[itemIndex],
+                validation_link_info: {
+                  link: newLink,
+                  expires_at: newExpiresAt
+                }
+            }
+
+            pagination.value.data = [...pagination.value.data]
+        }
+
+        regeneratedLinkData.value = {
+            link: newLink,
+            expiresAt: newExpiresAt
+        }
+        
+        showRegenerateModal.value = true
+
+        toast.add({ severity: 'success', summary: 'Berhasil', detail: 'Link approval manager baru telah dibuat.', life: 3000 })
+    } catch (error) {
+        toast.add({ severity: 'error', summary: 'Error', detail: error?.response?.data?.message ?? 'Gagal membuat ulang link approval manager.', life: 5000 })
+    } finally {
+        regeneratingLinks.value[featureRequestId] = false
+    }
+  }
+
+  const closeRegenerateModal = () => {
+    showRegenerateModal.value = false
+  }
+
   return {
     requests,
     loading,
@@ -771,7 +835,12 @@ export function useFeatureRequestIndex() {
     formatDateOnly,
     instansiLabel,
     canCreate,
-    isAdmin
+    isAdmin,
+    regenerateValidationLink,
+    regeneratingLinks,
+    showRegenerateModal,
+    regeneratedLinkData,
+    closeRegenerateModal
   }
 }
 
@@ -1025,6 +1094,9 @@ export function useFeatureRequestCreate() {
   const loading = ref(false)
   const message = ref('')
   const messageType = ref('success')
+  const showSuccessModal = ref(false)
+  const generatedLink = ref('')
+  const countdownSeconds = ref(0)
 
   const userRole = computed(() => Number(auth.user?.level ?? auth.user?.role ?? 0))
   const canSubmit = computed(() => isRole(userRole.value, ROLE.USER))
@@ -1130,7 +1202,7 @@ export function useFeatureRequestCreate() {
     }
 
     if (!auth.user?.has_kode_sign) {
-      message.value = 'Anda belum menyimpan kode ACC. Silakan atur kode terlebih dahulu.'
+      message.value = 'Anda belum menyimpan kode ACC. Silahkan atur kode terlebih dahulu.'
       messageType.value = 'error'
       return
     }
@@ -1156,22 +1228,48 @@ export function useFeatureRequestCreate() {
         payload.append('attachment', attachment.value)
       }
 
-      await axios.post('/feature-requests', payload, {
+      const response = await axios.post('/feature-requests', payload, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
-      message.value = 'Pengajuan berhasil dikirim. Silakan pantau status persetujuan.'
+
+      message.value = 'Pengajuan berhasil dikirim!'
       messageType.value = 'success'
-      note.value = ''
-      signCode.value = ''
-      requestTypes.value = []
-      description.value = ''
-      resetAttachmentField()
-      setTimeout(() => router.push('/feature-request'), 1000)
+
+      if (response.data.validation_link_info) {
+        generatedLink.value = response.data.validation_link_info.link        
+        showSuccessModal.value = true
+        
+        note.value = ''
+        signCode.value = ''
+        requestTypes.value = []
+        description.value = ''
+        resetAttachmentField()
+      } else {
+        setTimeout(() => router.push('/feature-request'), 1000)
+      }
     } catch (error) {
       message.value = error?.response?.data?.message ?? 'Pengajuan gagal dikirim.'
       messageType.value = 'error'
     } finally {
       loading.value = false
+    }
+  }
+
+  const closeSuccessModal = () => {
+    showSuccessModal.value = false
+  }
+
+  const copyLink = (inputId) => {
+    const input = document.getElementById(inputId)
+    if (input) {
+      input.select()
+      document.execCommand('copy')
+      const btn = event?.target
+      const originalText = btn.textContent
+      btn.textContent = 'Tersalin!'
+      setTimeout(() => {
+        btn.textContent = originalText
+      }, 2000)
     }
   }
 
@@ -1194,7 +1292,11 @@ export function useFeatureRequestCreate() {
     messageTypeClass,
     handleAttachmentChange,
     resetAttachmentField,
-    submit
+    submit,
+    showSuccessModal,
+    closeSuccessModal,
+    generatedLink,
+    copyLink
   }
 }
 
@@ -1591,7 +1693,7 @@ export function useFeatureRequestDetail() {
     }
 
     if (!auth.user?.has_kode_sign) {
-      return 'Anda belum menyimpan kode ACC. Silakan atur kode melalui menu profil.'
+      return 'Anda belum menyimpan kode ACC. Silahkan atur kode melalui menu profil.'
     }
 
     return 'Anda dapat melakukan persetujuan begitu siap.'
@@ -1628,7 +1730,7 @@ export function useFeatureRequestDetail() {
 
     if (typeof data === 'string' && data.trim()) {
       if (data.includes('Route [login] not defined')) {
-        return 'Sesi login tidak lagi valid. Silakan masuk kembali lalu coba unduh lagi.'
+        return 'Sesi login tidak lagi valid. Silahkan masuk kembali lalu coba unduh lagi.'
       }
       return data
     }
@@ -1638,7 +1740,7 @@ export function useFeatureRequestDetail() {
         const text = await data.text()
 
         if (text.includes('Route [login] not defined')) {
-          return 'Sesi login tidak lagi valid. Silakan masuk kembali lalu coba unduh lagi.'
+          return 'Sesi login tidak lagi valid. Silahkan masuk kembali lalu coba unduh lagi.'
         }
 
         try {
@@ -1663,10 +1765,10 @@ export function useFeatureRequestDetail() {
     }
 
     if (headers?.['www-authenticate']) {
-      return 'Sesi login Anda mungkin telah kedaluwarsa. Silakan masuk kembali.'
+      return 'Sesi login Anda mungkin telah kedaluwarsa. Silahkan masuk kembali.'
     }
 
-    return 'Gagal mengunduh lampiran. Silakan coba lagi nanti.'
+    return 'Gagal mengunduh lampiran. Silahkan coba lagi nanti.'
   }
 
   const downloadAttachment = async () => {

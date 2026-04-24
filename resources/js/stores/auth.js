@@ -18,10 +18,10 @@ const setAuthorizationHeader = (token = null) => {
 const buildTimeoutMessage = (minutes = null) => {
     if (Number.isFinite(minutes) && minutes > 0) {
         const normalized = Math.round(minutes)
-        return `Sesi telah berakhir setelah ${normalized} menit. Silakan masuk kembali.`
+        return `Sesi telah berakhir setelah ${normalized} menit. Silahkan masuk kembali.`
     }
 
-    return 'Sesi telah berakhir. Silakan masuk kembali.'
+    return 'Sesi telah berakhir. Silahkan masuk kembali.'
 }
 
 export const useAuthStore = defineStore('auth', {

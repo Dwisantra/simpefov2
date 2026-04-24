@@ -11,8 +11,16 @@ import router from './router';
 import { createPinia } from 'pinia';
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate';
 import { useAuthStore } from './stores/auth';
+
+import PrimeVue from 'primevue/config';
+import Toast from 'primevue/toast';
+import ToastService from 'primevue/toastservice';
+import Aura from '@primeuix/themes/aura';
+
 import '../css/app.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
+import 'bootstrap-icons/font/bootstrap-icons.css';
+
 /**
  * Next, we will create a fresh Vue application instance. You may then begin
  * registering components with the application instance so they are ready
@@ -26,6 +34,15 @@ pinia.use(piniaPluginPersistedstate);
 const app = createApp(App);
 app.use(pinia);
 app.use(router);
+app.use(PrimeVue, {
+    theme: {
+        preset: Aura,
+        options: {
+            darkModeSelector: '.my-app-dark'
+        }
+    }
+});
+app.use(ToastService);
 
 const auth = useAuthStore()
 auth.loadUserFromStorage()

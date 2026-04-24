@@ -26,7 +26,7 @@ class ExpireInactiveTokens
                 $token->delete();
 
                 return response()->json([
-                    'message' => 'Sesi telah berakhir karena tidak ada aktivitas. Silakan masuk kembali.'
+                    'message' => 'Sesi telah berakhir karena tidak ada aktivitas. Silahkan masuk kembali.'
                 ], 401);
             }
         }

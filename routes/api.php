@@ -5,6 +5,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\FeatureRequestController;
 use App\Http\Controllers\ApprovalController;
+use App\Http\Controllers\ApprovalValidationController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\FeatureRequestCommentController;
@@ -41,21 +42,16 @@ Route::middleware(['auth:sanctum', 'sanctum.timeout'])->group(function () {
     Route::get('/feature-requests', [FeatureRequestController::class, 'index']);
     Route::get('/feature-requests/monitoring', [FeatureRequestController::class, 'monitoring']);
     Route::get('/feature-requests/monitoring/export', [FeatureRequestController::class, 'exportMonitoring']);
-    Route::post('/feature-requests', [FeatureRequestController::class, 'store'])
-        ->middleware('ensure-requester');
+    Route::post('/feature-requests', [FeatureRequestController::class, 'store'])->middleware('ensure-requester');
     Route::get('/feature-requests/{featureRequest}', [FeatureRequestController::class, 'show']);
     Route::put('/feature-requests/{featureRequest}', [FeatureRequestController::class, 'update']);
     Route::delete('/feature-requests/{featureRequest}', [FeatureRequestController::class, 'destroy']);
     Route::post('/feature-requests/{featureRequest}/gitlab', [FeatureRequestGitlabController::class, 'sync']);
-    Route::get('/feature-requests/{featureRequest}/attachment', [FeatureRequestController::class, 'downloadAttachment'])
-        ->name('api.feature-requests.attachment');
+    Route::get('/feature-requests/{featureRequest}/attachment', [FeatureRequestController::class, 'downloadAttachment'])->name('api.feature-requests.attachment');
     Route::post('/feature-requests/{featureRequest}/approve', [ApprovalController::class, 'approve']);
+    Route::post('/feature-requests/{featureRequest}/validation-link', [ApprovalValidationController::class, 'generateLink']);
     Route::post('/feature-requests/{featureRequest}/comments', [FeatureRequestCommentController::class, 'store']);
-    Route::get(
-        '/feature-requests/{featureRequest}/comments/{comment}/attachment',
-        [FeatureRequestCommentController::class, 'downloadAttachment']
-    )->name('api.feature-requests.comments.attachment');
-
+    Route::get('/feature-requests/{featureRequest}/comments/{comment}/attachment', [FeatureRequestCommentController::class, 'downloadAttachment'])->name('api.feature-requests.comments.attachment');
     Route::get('/manager/jangmed/priorities', [JangmedPriorityController::class, 'index']);
     Route::patch('/manager/jangmed/priorities/{featureRequest}', [JangmedPriorityController::class, 'update']);
 });

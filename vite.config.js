@@ -28,4 +28,12 @@ export default defineConfig({
             '@': path.resolve(__dirname, 'resources/js'),
         },
     },
+    css: {
+        preprocessorOptions: {
+        scss: {
+            quietDeps: true,
+            silenceDeprecations: ['mixed-decls', 'color-functions', 'global-builtin', 'import'],
+        },
+        },
+    },
 });

@@ -33,7 +33,7 @@ class UserVerifiedNotification extends Notification
             ->subject('Akun SIMPEFO Anda Telah Diverifikasi')
             ->greeting('Halo ' . ($notifiable->name ?? 'Pengguna') . '!')
             ->line('Akun Anda telah diverifikasi oleh admin SIMPEFO.')
-            ->line('Silakan gunakan kredensial berikut untuk masuk ke SIMPEFO:')
+            ->line('Silahkan gunakan kredensial berikut untuk masuk ke SIMPEFO:')
             ->line('Email: ' . ($notifiable->email ?? '-'));
 
         if ($this->initialPassword) {

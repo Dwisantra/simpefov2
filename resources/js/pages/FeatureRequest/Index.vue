@@ -175,12 +175,69 @@
                     </p>
                     <p class="text-muted small mb-3">{{ instansiLabel(item.requester_instansi || item.user?.instansi) }}</p>
                     <p class="text-muted mb-0">{{ formatDate(item.created_at) }}</p>
+
+                    <!-- Validation Link Section -->
+                    <div v-if="stage === 'submission' && item.status === 'pending'" class="mt-3 pt-3 border-top">
+                      <div v-if="item.validation_link_info && !isLinkExpired(item.validation_link_info.expires_at)" class="mb-2">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                          <small class="text-success fw-semibold d-flex align-items-center gap-1">
+                            <i class="bi bi-check-circle-fill"></i> Link Approval Manager Aktif
+                          </small>
+                        </div>
+                        <div class="input-group input-group-sm">
+                          <input 
+                            type="text" 
+                            class="form-control" 
+                            :value="item.validation_link_info.link" 
+                            readonly 
+                            style="background-color: #f8f9fa;"
+                          >
+                          
+                          <button 
+                            @click="copyLinkToClipboard(item.validation_link_info.link)"
+                            class="btn btn-success btn-sm" 
+                            type="button"
+                            title="Salin link"
+                          >
+                            <i class="bi bi-clipboard me-1"></i>Salin
+                          </button>
+                        </div>
+                      </div>
+
+                      <div v-else-if="item.validation_link_info && isLinkExpired(item.validation_link_info.expires_at)" class="alert alert-warning py-2 mb-2 d-flex align-items-center gap-2">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        <small>Link sudah kadaluarsa, buat yang baru</small>
+                      </div>
+
+                      <div v-else class="alert alert-info py-2 mb-2 d-flex align-items-center gap-2">
+                        <i class="bi bi-info-circle"></i>
+                        <small>Link tidak ada / sudah kadaluarsa</small>
+                      </div>
+
+                      <button 
+                        v-if="!item.validation_link_info || isLinkExpired(item.validation_link_info.expires_at)"
+                        @click="regenerateValidationLink(item.id)"
+                        :disabled="regeneratingLinks[item.id]"
+                        class="btn btn-outline-secondary btn-sm w-100"
+                        type="button"
+                      >
+                        <span v-if="regeneratingLinks[item.id]" class="spinner-border spinner-border-sm me-1"></span>
+                        <i v-else class="bi bi-arrow-repeat me-1"></i>
+                          Regenerate Link
+                      </button>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="mt-3 pt-3 border-top">
+                      <router-link :to="`/feature-request/${item.id}`" class="btn btn-outline-primary btn-sm w-100">
+                        <i class="bi bi-eye me-1"></i>Lihat Detail
+                      </router-link>
+                    </div>
                   </div>
-                  <router-link :to="`/feature-request/${item.id}`" class="btn btn-outline-primary w-100">
-                    Lihat Detail
-                  </router-link>
                 </aside>
               </div>
+
+              
             </div>
           </div>
         </div>
@@ -227,6 +284,14 @@
         </nav>
       </div>
     </div>
+
+    <LinkModal 
+      :show="showRegenerateModal" 
+      :link="regeneratedLinkData.link"
+      :expires-at="regeneratedLinkData.expiresAt"
+      message="Link approval manager berhasil dibuat ulang!"
+      @close="closeRegenerateModal"
+    />
   </div>
 </template>
 
@@ -235,7 +300,10 @@ import { computed } from 'vue'
 import { useFeatureRequestIndex } from '@/ticketing/composables'
 import { ROLE, ROLE_LABELS } from '@/constants/roles'
 import { ref } from 'vue'
+import LinkModal from '@/components/LinkModal.vue'
+import { useToast } from "primevue/usetoast";
 
+const toast = useToast();
 const DESCRIPTION_LIMIT = 150
 const expandTickets = ref([])
 const truncateText = (text, length = DESCRIPTION_LIMIT) => {
@@ -297,7 +365,12 @@ const {
   stage,
   stageOptions,
   stageDescription,
-  setStage
+  setStage,
+  regenerateValidationLink,
+  regeneratingLinks,
+  showRegenerateModal,
+  regeneratedLinkData,
+  closeRegenerateModal
 } = useFeatureRequestIndex()
 
 const hasStageItems = computed(() => (requests.value ?? []).length > 0)
@@ -316,7 +389,7 @@ const roleNotice = computed(() => {
   }
 
   if (!canCreate.value) {
-    return 'Anda memiliki akses pantau dan persetujuan. Untuk membuat ticket baru silakan minta bantuan pemohon.'
+    return 'Anda memiliki akses pantau dan persetujuan. Untuk membuat ticket baru silahkan minta bantuan pemohon.'
   }
 
   return ''
@@ -344,4 +417,19 @@ const pointStateClass = (state) => ({
 })
 
 const progressAria = (item) => progressPercentage(item)
+
+const isLinkExpired = (expiresAt) => {
+  if (!expiresAt) return true
+  const expireTime = new Date(expiresAt).getTime()
+  const now = new Date().getTime()
+  return expireTime < now
+}
+
+const copyLinkToClipboard = (link) => {
+  navigator.clipboard.writeText(link).then(() => {
+    toast.add({ severity: 'info', summary: 'Info', detail: 'Link berhasil disalin!', life: 3000 });
+  }).catch(() => {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Gagal menyalin link', life: 3000 });
+  })
+}
 </script>

@@ -33,4 +33,9 @@ class Approval extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function validationToken()
+    {
+        return $this->hasOne(ApprovalValidationToken::class);
+    }
 }

@@ -65,6 +65,7 @@ class FeatureRequest extends Model
         'workflow_stage_label',
         'requester_unit_name',
         'requires_director_a_approval',
+        'validation_link_info',
     ];
 
     protected $casts = [
@@ -80,6 +81,11 @@ class FeatureRequest extends Model
     public function approvals()
     {
         return $this->hasMany(Approval::class)->orderBy('approved_at');
+    }
+
+    public function validationTokens()
+    {
+        return $this->hasMany(ApprovalValidationToken::class);
     }
 
     public function comments()
@@ -238,5 +244,24 @@ class FeatureRequest extends Model
         }
 
         return true;
+    }
+
+    public function getValidationLinkInfoAttribute(): ?array
+    {
+        $token = $this->validationTokens()
+            ->where('used_at', null)
+            ->where('expires_at', '>', now())
+            ->orderByDesc('created_at')
+            ->first();
+
+        if (!$token) {
+            return null;
+        }
+
+        return [
+            'link' => route('approval.validate-link', ['code' => $token->short_code]),
+            'expires_at' => $token->expires_at->toIso8601String(),
+            'short_code' => $token->short_code,
+        ];
     }
 }

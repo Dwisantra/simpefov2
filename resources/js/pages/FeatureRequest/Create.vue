@@ -119,7 +119,7 @@
           <div class="card-body p-4 p-lg-5 text-center">
             <h2 class="fw-semibold mb-3">Akses Pengajuan Terbatas</h2>
             <p class="text-muted mb-4">
-              Hanya pemohon yang dapat mengajukan ticket pengajuan form baru. Silakan hubungi pemohon jika Anda perlu
+              Hanya pemohon yang dapat mengajukan ticket pengajuan form baru. Silahkan hubungi pemohon jika Anda perlu
               memulai proses pengajuan.
             </p>
             <router-link to="/feature-request" class="btn btn-outline-primary px-4">Kembali ke Daftar Ticket</router-link>
@@ -128,10 +128,25 @@
       </div>
     </div>
   </div>
+
+  <LinkModal 
+    :show="showSuccessModal" 
+    :link="generatedLink" 
+    @close="handleClose" 
+  />
 </template>
 
 <script setup>
+import { useRouter, useRoute } from 'vue-router'
 import { useFeatureRequestCreate } from '@/ticketing/composables'
+import LinkModal from '@/components/LinkModal.vue'
+
+const router = useRouter()
+
+const handleClose = () => {  
+  showSuccessModal.value = false
+  router.push('/feature-request')
+}
 
 const {
   requestTypes,
@@ -151,6 +166,10 @@ const {
   messageTypeClass,
   handleAttachmentChange,
   resetAttachmentField,
-  submit
+  submit,
+  showSuccessModal,
+  closeSuccessModal,
+  generatedLink,
+  copyLink
 } = useFeatureRequestCreate()
 </script>

@@ -103,6 +103,7 @@
     <main class="flex-grow-1 py-5 bg-light">
       <div class="container">
         <router-view />
+        <Toast />
       </div>
     </main>
 
@@ -161,6 +162,7 @@
 import { Collapse } from 'bootstrap'
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useAppShell } from '@/ticketing/composables'
+import Toast from 'primevue/toast'
 
 const {
   auth,
