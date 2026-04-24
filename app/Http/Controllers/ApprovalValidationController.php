@@ -151,4 +151,33 @@ class ApprovalValidationController extends Controller
 
         return response()->json($result, 422);
     }
+
+    /**
+     * Show the success page after validation
+     */
+    public function showSuccessPage(string $code)
+    {
+        $validationToken = ApprovalValidationToken::where('short_code', $code)
+            ->with(['featureRequest', 'approval.user'])
+            ->first();
+
+        if (!$validationToken) {
+            return redirect('/')->with('error', 'Invalid success link');
+        }
+
+        if (!$validationToken->used_at) {
+            return redirect('/')->with('error', 'Link belum digunakan');
+        }
+
+        $featureRequest = $validationToken->featureRequest;
+        $approval = $validationToken->approval;
+
+        return view('approval.validation-success', [
+            'featureRequestId' => $featureRequest->id,
+            'featureRequestTitle' => $featureRequest->title,
+            'approvalUserName' => $approval->user->name,
+            'approvalNote' => $approval->note,
+            'approvalTime' => $approval->approved_at,
+        ]);
+    }
 }

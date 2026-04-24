@@ -152,10 +152,10 @@
                     document.getElementById('sign_code').value = '';
                     document.getElementById('note').value = '';
 
-                    // Redirect after 1 seconds
+                    // Redirect to success page after 2 seconds
                     setTimeout(() => {
-                        window.location.href = '/';
-                    }, 1000);
+                        window.location.href = '/approval/success/{{ $code }}';
+                    }, 2000);
                 } else {
                     errorMessage.classList.remove('hidden');
                     errorMessage.textContent = data.message || 'Terjadi kesalahan, Silahkan coba lagi.';
