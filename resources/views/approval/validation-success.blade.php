@@ -48,12 +48,12 @@
                         <p class="font-semibold text-gray-800">{{ $featureRequestId }}</p>
                     </div>
 
-                    @if($approvalNote)
+                    {{-- @if($approvalNote)
                     <div class="border rounded-lg p-4 bg-gray-50">
                         <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Catatan</p>
                         <p class="text-gray-700 text-sm">{{ $approvalNote }}</p>
                     </div>
-                    @endif
+                    @endif --}}
 
                     <div class="border rounded-lg p-4 bg-gray-50">
                         <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Waktu Persetujuan</p>
