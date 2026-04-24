@@ -50,7 +50,7 @@
 
                     @if($approvalNote)
                     <div class="border rounded-lg p-4 bg-gray-50">
-                        <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Deskripsi</p>
+                        <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Catatan</p>
                         <p class="text-gray-700 text-sm">{{ $approvalNote }}</p>
                     </div>
                     @endif
